@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import styles from './Home.module.css';
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, TileLayer, Circle, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 interface Position {
   latitude: number;
   longitude: number;
+  accuracy: number; // in meters
 }
 
 const customIcon = L.icon({
@@ -18,6 +19,33 @@ const customIcon = L.icon({
   shadowAnchor: [12, 41],
 });
 
+// Haversine formula to calculate distance between two coords in meters
+function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const R = 6371000; // Earth radius in meters
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+const SetInitialView: React.FC<{ position: Position }> = ({ position }) => {
+  const map = useMap();
+  const initialSet = useRef(false);
+
+  useEffect(() => {
+    if (!initialSet.current) {
+      map.setView([position.latitude, position.longitude], 17);
+      initialSet.current = true;
+    }
+  }, [map, position]);
+
+  return null;
+};
+
 export const Home: React.FC = () => {
   const [position, setPosition] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -28,15 +56,37 @@ export const Home: React.FC = () => {
       return;
     }
 
-    const success = (pos: GeolocationPosition) => {
-      const roundedLat = Number(pos.coords.latitude.toFixed(12));
-      const roundedLng = Number(pos.coords.longitude.toFixed(12));
+    let lastPosition: Position | null = null;
 
-      setPosition({
-        latitude: roundedLat,
-        longitude: roundedLng,
-      });
-      setError(null);
+    const success = (pos: GeolocationPosition) => {
+      const newPos: Position = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      };
+
+      // If no last position, set immediately
+      if (!lastPosition) {
+        setPosition(newPos);
+        lastPosition = newPos;
+        setError(null);
+        return;
+      }
+
+      // Calculate distance between last and new position
+      const dist = getDistanceMeters(
+        lastPosition.latitude,
+        lastPosition.longitude,
+        newPos.latitude,
+        newPos.longitude
+      );
+
+      // Update position only if moved more than 3 meters or accuracy improved
+      if (dist > 3 || newPos.accuracy < lastPosition.accuracy) {
+        setPosition(newPos);
+        lastPosition = newPos;
+        setError(null);
+      }
     };
 
     const failure = (err: GeolocationPositionError) => {
@@ -54,14 +104,15 @@ export const Home: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h1>Hello World! 12</h1>
+      <h1>Hello World!</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!error && !position && <p>Loading position...</p>}
       {position && (
         <>
           <div>
-            <p>Latitude: {position.latitude}</p>
-            <p>Longitude: {position.longitude}</p>
+            <p>Latitude: {position.latitude.toFixed(6)}</p>
+            <p>Longitude: {position.longitude.toFixed(6)}</p>
+            <p>Accuracy: ±{position.accuracy.toFixed(1)} meters</p>
           </div>
 
           <MapContainer
@@ -70,6 +121,7 @@ export const Home: React.FC = () => {
             scrollWheelZoom={false}
             style={{ height: '800px', width: '100%' }}
           >
+            <SetInitialView position={position} />
             <TileLayer
               attribution='&copy; OpenStreetMap contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -79,6 +131,12 @@ export const Home: React.FC = () => {
                 A pretty CSS3 popup. <br /> Easily customizable.
               </Popup>
             </Marker>
+            {/* Circle showing accuracy radius */}
+            <Circle
+              center={[position.latitude, position.longitude]}
+              radius={position.accuracy}
+              pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
+            />
           </MapContainer>
         </>
       )}
