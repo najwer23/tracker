@@ -54,6 +54,10 @@ export const Home: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const lastPositionRef = useRef<Position | null>(null);
 
+  // Constants to filter noisy GPS readings
+  const MIN_ACCURACY = 30; // meters, ignore positions with worse accuracy
+  const MIN_MOVE_DISTANCE = 5; // meters, minimum movement to count
+
   useEffect(() => {
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
@@ -66,6 +70,12 @@ export const Home: React.FC = () => {
         longitude: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
       };
+
+      // Ignore positions with poor accuracy
+      if (newPos.accuracy > MIN_ACCURACY) {
+        // Optionally, you can set an error or just ignore silently
+        return;
+      }
 
       // Set start position once
       if (!startPosition) {
@@ -84,8 +94,8 @@ export const Home: React.FC = () => {
           newPos.longitude
         );
 
-        // Only update distance if movement is greater than the current accuracy
-        if (dist > newPos.accuracy) {
+        // Only count movement if distance > accuracy and > minimum move distance
+        if (dist > newPos.accuracy && dist > MIN_MOVE_DISTANCE) {
           setDistance((prev) => prev + dist);
           setPosition(newPos);
           lastPositionRef.current = newPos;
@@ -109,7 +119,7 @@ export const Home: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', width: '100%' }}>
-      <h1>Traveled Distance with Accuracy Threshold</h1>
+      <h1>Traveled Distance with Accuracy Filtering</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!error && !position && <p>Loading position...</p>}
       {position && startPosition && (
