@@ -3,8 +3,9 @@ import { MapContainer, Marker, Popup, TileLayer, Circle, useMap } from 'react-le
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+// Custom marker icon
 const customIcon = L.icon({
-  iconUrl: 'marker.svg', // your marker image path
+  iconUrl: 'marker.svg', // Adjust path to your marker image in public folder
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -18,6 +19,7 @@ interface Position {
   accuracy: number;
 }
 
+// Haversine formula to calculate distance between two lat/lng points in meters
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const toRad = (x: number) => (x * Math.PI) / 180;
   const R = 6371000; // Earth radius in meters
@@ -30,6 +32,7 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+// Component to set initial map view only once
 const SetInitialView: React.FC<{ position: Position }> = ({ position }) => {
   const map = useMap();
   const initialSet = useRef(false);
@@ -73,7 +76,6 @@ export const Home: React.FC = () => {
         return;
       }
 
-      // Calculate distance from last position
       if (lastPositionRef.current) {
         const dist = getDistanceMeters(
           lastPositionRef.current.latitude,
@@ -82,8 +84,8 @@ export const Home: React.FC = () => {
           newPos.longitude
         );
 
-        // Update distance if moved more than 3 meters (to avoid noise)
-        if (dist > 3) {
+        // Only update distance if movement is greater than the current accuracy
+        if (dist > newPos.accuracy) {
           setDistance((prev) => prev + dist);
           setPosition(newPos);
           lastPositionRef.current = newPos;
@@ -107,7 +109,7 @@ export const Home: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', width: '100%' }}>
-      <h1>Traveled Distance From Start</h1>
+      <h1>Traveled Distance with Accuracy Threshold</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!error && !position && <p>Loading position...</p>}
       {position && startPosition && (
