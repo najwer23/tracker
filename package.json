@@ -1,0 +1,46 @@
+{
+  "name": "tracker",
+  "version": "1.0.0",
+  "keywords": [
+    "react",
+    "gh-pages",
+    "typescript",
+    "vite",
+    "vitest",
+    "css modules",
+    "front-end",
+    "yarn"
+  ],
+  "homepage": "https://najwer23.github.io/tracker/",
+  "type": "module",
+  "scripts": {
+    "bench": "vitest bench",
+    "build": "tsc --build --clean && vite build",
+    "deploy": "yarn run build && gh-pages -d build && rimraf build",
+    "format": "prettier --write \"**/*.{json,mdx,ts,tsx,md,css,mjs}\"",
+    "god": "ncu -u && yarn install && yarn run start",
+    "preview": "yarn build && vite preview --open --host",
+    "start": "vite --open --host",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.5.1",
+    "gh-pages": "^6.3.0",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.2"
+  },
+  "packageManager": "yarn@4.9.2"
+}
