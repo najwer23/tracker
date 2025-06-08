@@ -35,8 +35,7 @@ export default defineConfig({
             purpose: 'any',
           },
         ],
-      }
-      
+      },
     }),
   ],
   build: {
