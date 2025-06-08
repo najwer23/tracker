@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import styles from './Home.module.css';
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -10,14 +10,13 @@ interface Position {
 }
 
 const customIcon = L.icon({
-  iconUrl: 'marker.svg',   // path to your custom marker image
-  iconSize: [25, 41],                         // size of the icon [width, height]
-  iconAnchor: [12, 41],                       // point of the icon which corresponds to marker's location
-  popupAnchor: [1, -34],                      // point from which the popup should open relative to the iconAnchor
-  shadowSize: [41, 41],                       // size of the shadow
-  shadowAnchor: [12, 41],                     // anchor for the shadow
+  iconUrl: 'marker.svg',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+  shadowAnchor: [12, 41],
 });
-
 
 export const Home: React.FC = () => {
   const [position, setPosition] = useState<Position | null>(null);
@@ -30,10 +29,12 @@ export const Home: React.FC = () => {
     }
 
     const success = (pos: GeolocationPosition) => {
-      console.log(pos.coords.latitude, pos.coords.longitude);
+      const roundedLat = Number(pos.coords.latitude.toFixed(12));
+      const roundedLng = Number(pos.coords.longitude.toFixed(12));
+
       setPosition({
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
+        latitude: roundedLat,
+        longitude: roundedLng,
       });
       setError(null);
     };
@@ -53,7 +54,7 @@ export const Home: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h1>Hello World!</h1>
+      <h1>Hello World! 12</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!error && !position && <p>Loading position...</p>}
       {position && (
@@ -64,11 +65,15 @@ export const Home: React.FC = () => {
           </div>
 
           <MapContainer
-            center={[position.latitude, +position.longitude]}
+            center={[position.latitude, position.longitude]}
             zoom={17}
             scrollWheelZoom={false}
-            style={{ height: '800px', width: '100%' }}>
-            <TileLayer attribution="" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            style={{ height: '800px', width: '100%' }}
+          >
+            <TileLayer
+              attribution='&copy; OpenStreetMap contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
             <Marker position={[position.latitude, position.longitude]} icon={customIcon}>
               <Popup>
                 A pretty CSS3 popup. <br /> Easily customizable.
