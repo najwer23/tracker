@@ -1,11 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { MapContainer, Marker, Popup, TileLayer, Circle, useMap } from 'react-leaflet';
+import { MapContainer, Marker, Popup, TileLayer, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Custom marker icon
 const customIcon = L.icon({
-  iconUrl: 'marker.svg', // Adjust path to your marker image in public folder
+  iconUrl: 'marker.svg',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -19,10 +18,9 @@ interface Position {
   accuracy: number;
 }
 
-// Haversine formula to calculate distance between two lat/lng points in meters
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const toRad = (x: number) => (x * Math.PI) / 180;
-  const R = 6371000; // Earth radius in meters
+  const R = 6371000;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
@@ -32,7 +30,6 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Component to set initial map view only once
 const SetInitialView: React.FC<{ position: Position }> = ({ position }) => {
   const map = useMap();
   const initialSet = useRef(false);
@@ -51,12 +48,12 @@ export const Home: React.FC = () => {
   const [position, setPosition] = useState<Position | null>(null);
   const [startPosition, setStartPosition] = useState<Position | null>(null);
   const [distance, setDistance] = useState<number>(0);
+  const [path, setPath] = useState<[number, number][]>([]); // Array of [lat, lng]
   const [error, setError] = useState<string | null>(null);
   const lastPositionRef = useRef<Position | null>(null);
 
-  // Constants to filter noisy GPS readings
-  const MIN_ACCURACY = 30; // meters, ignore positions with worse accuracy
-  const MIN_MOVE_DISTANCE = 5; // meters, minimum movement to count
+  const MIN_ACCURACY = 30;
+  const MIN_MOVE_DISTANCE = 5;
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -71,17 +68,15 @@ export const Home: React.FC = () => {
         accuracy: pos.coords.accuracy,
       };
 
-      // Ignore positions with poor accuracy
       if (newPos.accuracy > MIN_ACCURACY) {
-        // Optionally, you can set an error or just ignore silently
         return;
       }
 
-      // Set start position once
       if (!startPosition) {
         setStartPosition(newPos);
         setPosition(newPos);
         lastPositionRef.current = newPos;
+        setPath([[newPos.latitude, newPos.longitude]]);
         setError(null);
         return;
       }
@@ -94,11 +89,11 @@ export const Home: React.FC = () => {
           newPos.longitude
         );
 
-        // Only count movement if distance > accuracy and > minimum move distance
         if (dist > newPos.accuracy && dist > MIN_MOVE_DISTANCE) {
           setDistance((prev) => prev + dist);
           setPosition(newPos);
           lastPositionRef.current = newPos;
+          setPath((prev) => [...prev, [newPos.latitude, newPos.longitude]]);
           setError(null);
         }
       }
@@ -119,7 +114,7 @@ export const Home: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', width: '100%' }}>
-      <h1>Traveled Distance with Accuracy Filtering</h1>
+      <h1>Traveled Distance and Path</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!error && !position && <p>Loading position...</p>}
       {position && startPosition && (
@@ -163,6 +158,8 @@ export const Home: React.FC = () => {
               radius={position.accuracy}
               pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
             />
+            {/* Polyline showing the traveled path */}
+            <Polyline positions={path} pathOptions={{ color: 'red', weight: 4 }} />
           </MapContainer>
         </>
       )}
