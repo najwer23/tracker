@@ -1,17 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
-import styles from './Home.module.css';
 import { MapContainer, Marker, Popup, TileLayer, Circle, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-interface Position {
-  latitude: number;
-  longitude: number;
-  accuracy: number; // in meters
-}
-
+// Custom marker icon setup
 const customIcon = L.icon({
-  iconUrl: 'marker.svg',
+  iconUrl: 'marker.svg', // Place your marker.svg in the public folder or adjust path accordingly
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -19,7 +13,13 @@ const customIcon = L.icon({
   shadowAnchor: [12, 41],
 });
 
-// Haversine formula to calculate distance between two coords in meters
+interface Position {
+  latitude: number;
+  longitude: number;
+  accuracy: number; // in meters
+}
+
+// Haversine formula to calculate distance between two coordinates in meters
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const toRad = (x: number) => (x * Math.PI) / 180;
   const R = 6371000; // Earth radius in meters
@@ -32,6 +32,7 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+// Component to set the initial map view only once
 const SetInitialView: React.FC<{ position: Position }> = ({ position }) => {
   const map = useMap();
   const initialSet = useRef(false);
@@ -65,24 +66,18 @@ export const Home: React.FC = () => {
         accuracy: pos.coords.accuracy,
       };
 
-      // If no last position, set immediately
-      if (!lastPosition) {
-        setPosition(newPos);
-        lastPosition = newPos;
-        setError(null);
-        return;
-      }
-
-      // Calculate distance between last and new position
-      const dist = getDistanceMeters(
-        lastPosition.latitude,
-        lastPosition.longitude,
-        newPos.latitude,
-        newPos.longitude
-      );
-
-      // Update position only if moved more than 3 meters or accuracy improved
-      if (dist > 3 || newPos.accuracy < lastPosition.accuracy) {
+      // Filter updates to reduce jitter:
+      // Update only if moved more than 3 meters or accuracy improved
+      if (
+        !lastPosition ||
+        getDistanceMeters(
+          lastPosition.latitude,
+          lastPosition.longitude,
+          newPos.latitude,
+          newPos.longitude
+        ) > 3 ||
+        newPos.accuracy < lastPosition.accuracy
+      ) {
         setPosition(newPos);
         lastPosition = newPos;
         setError(null);
@@ -94,25 +89,25 @@ export const Home: React.FC = () => {
     };
 
     const watcherId = navigator.geolocation.watchPosition(success, failure, {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 10000,
+      enableHighAccuracy: true, // Request high accuracy
+      maximumAge: 0,            // Do not use cached location
+      timeout: 15000,           // 15 seconds timeout
     });
 
     return () => navigator.geolocation.clearWatch(watcherId);
   }, []);
 
   return (
-    <div className={styles.container}>
-      <h1>Hello World!</h1>
+    <div style={{ height: '100vh', width: '100%' }}>
+      <h1>High Accuracy Geolocation with Leaflet</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!error && !position && <p>Loading position...</p>}
       {position && (
         <>
-          <div>
-            <p>Latitude: {position.latitude.toFixed(6)}</p>
-            <p>Longitude: {position.longitude.toFixed(6)}</p>
-            <p>Accuracy: ±{position.accuracy.toFixed(1)} meters</p>
+          <div style={{ marginBottom: 10 }}>
+            <strong>Latitude:</strong> {position.latitude.toFixed(6)} <br />
+            <strong>Longitude:</strong> {position.longitude.toFixed(6)} <br />
+            <strong>Accuracy:</strong> ±{position.accuracy.toFixed(1)} meters
           </div>
 
           <MapContainer
@@ -128,10 +123,10 @@ export const Home: React.FC = () => {
             />
             <Marker position={[position.latitude, position.longitude]} icon={customIcon}>
               <Popup>
-                A pretty CSS3 popup. <br /> Easily customizable.
+                Your current location <br />
+                Accuracy: ±{position.accuracy.toFixed(1)} meters
               </Popup>
             </Marker>
-            {/* Circle showing accuracy radius */}
             <Circle
               center={[position.latitude, position.longitude]}
               radius={position.accuracy}
