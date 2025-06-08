@@ -1,7 +1,25 @@
-import { useEffect, useState, useRef } from 'react';
-import { MapContainer, Marker, Popup, TileLayer, Circle, Polyline, useMap } from 'react-leaflet';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  Circle,
+  Polyline,
+  useMap,
+} from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+const MIN_ACCURACY = 30; // meters
+const MIN_MOVE_DISTANCE = 5; // meters
+const THROTTLE_TIME = 2000; // ms
+
+interface Position {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+}
 
 const customIcon = L.icon({
   iconUrl: 'marker.svg',
@@ -12,15 +30,14 @@ const customIcon = L.icon({
   shadowAnchor: [12, 41],
 });
 
-interface Position {
-  latitude: number;
-  longitude: number;
-  accuracy: number;
-}
-
-function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+function getDistanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
   const toRad = (x: number) => (x * Math.PI) / 180;
-  const R = 6371000;
+  const R = 6371000; // Earth radius in meters
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
@@ -48,60 +65,70 @@ export const Home: React.FC = () => {
   const [position, setPosition] = useState<Position | null>(null);
   const [startPosition, setStartPosition] = useState<Position | null>(null);
   const [distance, setDistance] = useState<number>(0);
-  const [path, setPath] = useState<[number, number][]>([]); // Array of [lat, lng]
+  const [path, setPath] = useState<[number, number][]>([]);
   const [error, setError] = useState<string | null>(null);
   const lastPositionRef = useRef<Position | null>(null);
+  const lastUpdateTimeRef = useRef<number>(0);
 
-  const MIN_ACCURACY = 30;
-  const MIN_MOVE_DISTANCE = 5;
+  const success = useCallback((pos: GeolocationPosition) => {
+    const now = Date.now();
 
-  useEffect(() => {
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
+    // Throttle updates to once every THROTTLE_TIME ms
+    if (now - lastUpdateTimeRef.current < THROTTLE_TIME) return;
+
+    const newPos: Position = {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+    };
+
+    if (newPos.accuracy > MIN_ACCURACY) {
+      // Ignore low accuracy points
       return;
     }
 
-    const success = (pos: GeolocationPosition) => {
-      const newPos: Position = {
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        accuracy: pos.coords.accuracy,
-      };
+    if (!startPosition) {
+      setStartPosition(newPos);
+      setPosition(newPos);
+      lastPositionRef.current = newPos;
+      setPath([[newPos.latitude, newPos.longitude]]);
+      setError(null);
+      lastUpdateTimeRef.current = now;
+      return;
+    }
 
-      if (newPos.accuracy > MIN_ACCURACY) {
-        return;
-      }
+    if (lastPositionRef.current) {
+      const dist = getDistanceMeters(
+        lastPositionRef.current.latitude,
+        lastPositionRef.current.longitude,
+        newPos.latitude,
+        newPos.longitude
+      );
 
-      if (!startPosition) {
-        setStartPosition(newPos);
+      // Only update if moved enough and new position is more accurate or similar
+      if (
+        dist > MIN_MOVE_DISTANCE &&
+        newPos.accuracy <= lastPositionRef.current.accuracy + 10 // allow small accuracy increase
+      ) {
+        setDistance((prev) => prev + dist);
         setPosition(newPos);
         lastPositionRef.current = newPos;
-        setPath([[newPos.latitude, newPos.longitude]]);
+        setPath((prev) => [...prev, [newPos.latitude, newPos.longitude]]);
         setError(null);
-        return;
+        lastUpdateTimeRef.current = now;
       }
+    }
+  }, [startPosition]);
 
-      if (lastPositionRef.current) {
-        const dist = getDistanceMeters(
-          lastPositionRef.current.latitude,
-          lastPositionRef.current.longitude,
-          newPos.latitude,
-          newPos.longitude
-        );
+  const failure = useCallback((err: GeolocationPositionError) => {
+    setError(`Error getting position: ${err.message}`);
+  }, []);
 
-        if (dist > newPos.accuracy && dist > MIN_MOVE_DISTANCE) {
-          setDistance((prev) => prev + dist);
-          setPosition(newPos);
-          lastPositionRef.current = newPos;
-          setPath((prev) => [...prev, [newPos.latitude, newPos.longitude]]);
-          setError(null);
-        }
-      }
-    };
-
-    const failure = (err: GeolocationPositionError) => {
-      setError(`Error getting position: ${err.message}`);
-    };
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.');
+      return;
+    }
 
     const watcherId = navigator.geolocation.watchPosition(success, failure, {
       enableHighAccuracy: true,
@@ -110,30 +137,51 @@ export const Home: React.FC = () => {
     });
 
     return () => navigator.geolocation.clearWatch(watcherId);
-  }, [startPosition]);
+  }, [success, failure]);
+
+  const resetTracking = () => {
+    setPosition(null);
+    setStartPosition(null);
+    setDistance(0);
+    setPath([]);
+    setError(null);
+    lastPositionRef.current = null;
+    lastUpdateTimeRef.current = 0;
+  };
 
   return (
-    <div style={{ height: '100vh', width: '100%' }}>
+    <div style={{ height: '100vh', width: '100%', padding: 10 }}>
       <h1>Traveled Distance and Path</h1>
+
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      {!error && !position && <p>Loading position...</p>}
+
+      {!error && !position && <p>Loading current position...</p>}
+
       {position && startPosition && (
         <>
           <div style={{ marginBottom: 10 }}>
             <p>
-              <strong>Start Position:</strong><br />
-              Lat: {startPosition.latitude.toFixed(6)}, Lon: {startPosition.longitude.toFixed(6)}
+              <strong>Start Position:</strong>
+              <br />
+              Lat: {startPosition.latitude.toFixed(6)}, Lon:{' '}
+              {startPosition.longitude.toFixed(6)}
             </p>
             <p>
-              <strong>Current Position:</strong><br />
-              Lat: {position.latitude.toFixed(6)}, Lon: {position.longitude.toFixed(6)}
+              <strong>Current Position:</strong>
+              <br />
+              Lat: {position.latitude.toFixed(6)}, Lon:{' '}
+              {position.longitude.toFixed(6)}
             </p>
             <p>
               <strong>Accuracy:</strong> ±{position.accuracy.toFixed(1)} meters
             </p>
             <p>
-              <strong>Total Distance Traveled:</strong> {(distance / 1000).toFixed(3)} km
+              <strong>Total Distance Traveled:</strong>{' '}
+              {(distance / 1000).toFixed(3)} km
             </p>
+            <button onClick={resetTracking} aria-label="Reset tracking">
+              Reset Tracking
+            </button>
           </div>
 
           <MapContainer
@@ -141,15 +189,17 @@ export const Home: React.FC = () => {
             zoom={17}
             scrollWheelZoom={false}
             style={{ height: '80vh', width: '100%' }}
+            aria-label="Map showing traveled path"
           >
             <SetInitialView position={startPosition} />
             <TileLayer
-              attribution='&copy; OpenStreetMap contributors'
+              attribution="&copy; OpenStreetMap contributors"
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <Marker position={[position.latitude, position.longitude]} icon={customIcon}>
               <Popup>
-                Current Location <br />
+                Current Location
+                <br />
                 Accuracy: ±{position.accuracy.toFixed(1)} meters
               </Popup>
             </Marker>
@@ -158,7 +208,6 @@ export const Home: React.FC = () => {
               radius={position.accuracy}
               pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
             />
-            {/* Polyline showing the traveled path */}
             <Polyline positions={path} pathOptions={{ color: 'red', weight: 4 }} />
           </MapContainer>
         </>
