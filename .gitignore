@@ -12,7 +12,6 @@ dist
 dist-ssr
 build
 *.local
-dev-dist
 
 # Editor directories and files
 .vscode/*
@@ -32,3 +31,6 @@ dev-dist
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+*.tsbuildinfo
+expo-env.d.ts
