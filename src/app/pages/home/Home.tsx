@@ -178,7 +178,7 @@ export const Home: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', width: '100%', padding: 10 }}>
-      <h1>Traveled Distance and Path 2.0</h1>
+      <h1>Traveled Distance and Path 3.0</h1>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
@@ -221,7 +221,7 @@ export const Home: React.FC = () => {
             <SetInitialView position={startPosition} />
             <TileLayer
               attribution="&copy; OpenStreetMap contributors"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              url="https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.{ext}"
             />
             <Marker position={[position.latitude, position.longitude]} icon={customIcon}>
               <Popup>
