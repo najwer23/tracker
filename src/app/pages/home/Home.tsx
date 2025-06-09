@@ -12,7 +12,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Constants
-const MIN_ACCURACY = 10; // meters
+const MIN_ACCURACY = 9; // meters
 const MIN_MOVE_DISTANCE = 10; // meters, lowered for more frequent updates
 const THROTTLE_TIME = 0; // ms, throttle updates
 const SMOOTHING_WINDOW = 1; // disabled smoothing
@@ -206,7 +206,7 @@ export const Home: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', width: '100%', padding: 10 }}>
-      <h1>Traveled Distance and Path (Improved)</h1>
+      <h1>Traveled Distance and Path (Improved) 2.0</h1>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
