@@ -1,341 +1,141 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  Button,
-  FlatList,
-  StyleSheet,
-  Alert,
-  Platform,
-} from "react-native";
-import * as Location from "expo-location";
-import * as TaskManager from "expo-task-manager";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import MapView, { Marker, Polyline } from "react-native-maps";
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, Text, View, Button, NativeEventEmitter, NativeModules } from 'react-native';
+import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 
-const LOCATION_TASK_NAME = "background-location-task";
-const STORAGE_KEY = "BACKGROUND_LOCATIONS";
+const LOCATION_TASK_NAME = 'background-location-task';
 
-interface LocationPoint {
+// Use React Native's NativeEventEmitter instead of Node.js events
+const locationEventEmitter = new NativeEventEmitter(NativeModules.ToastExample || {});
+
+interface LocationCoords {
   latitude: number;
   longitude: number;
-  timestamp: number;
+  accuracy?: number | null;
+  altitude?: number | null;
+  heading?: number | null;
+  speed?: number | null;
 }
 
 interface LocationTaskData {
   locations: Location.LocationObject[];
 }
 
-// Background task to receive location updates
+// Define the background task globally (outside component)
 TaskManager.defineTask(
   LOCATION_TASK_NAME,
-  async ({ data, error }: { data?: LocationTaskData; error?: any }) => {
+  async ({ data, error }: TaskManager.TaskManagerTaskBody<LocationTaskData>) => {
     if (error) {
-      console.error("Background location task error:", error);
+      console.error('Background location task error:', error);
       return;
     }
-    if (data?.locations) {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        const savedLocations: LocationPoint[] = stored
-          ? JSON.parse(stored)
-          : [];
-        const newLocations = data.locations.map((loc) => ({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          timestamp: loc.timestamp,
-        }));
-        const updatedLocations = [...savedLocations, ...newLocations];
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(updatedLocations)
-        );
-        console.log("Saved locations:", updatedLocations.length);
-      } catch (e) {
-        console.error("Failed to save locations", e);
-      }
+    if (data?.locations && data.locations.length > 0) {
+      const location = data.locations[0];
+      console.log('Background location:', location.coords);
+      // Emit location update event to React component
+      locationEventEmitter.emit('locationUpdate', location.coords);
     }
   }
 );
 
-export default function LocationTracker() {
-  const [locations, setLocations] = useState<LocationPoint[]>([]);
-  const [trackingMode, setTrackingMode] = useState<
-    "none" | "foreground" | "background"
-  >("none");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const foregroundSubscription = useRef<Location.LocationSubscription | null>(
-    null
-  );
-  const [polylineKey, setPolylineKey] = useState(0);
+export default function App() {
+  const [location, setLocation] = useState<LocationCoords | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const foregroundSubscription = useRef<Location.LocationSubscription | null>(null);
 
-  // Load saved locations from AsyncStorage
-  const loadLocations = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) setLocations(JSON.parse(stored));
-    } catch (e) {
-      console.error("Error loading locations", e);
-    }
-  };
-
-  // Clear saved locations
-  const clearLocations = async () => {
-    try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
-      setLocations([]);
-      console.log("Locations cleared");
-    } catch (e) {
-      console.error("Failed to clear locations", e);
-    }
-  };
-
+  // Subscribe to background location updates via event emitter
   useEffect(() => {
-    loadLocations();
+    const subscription = locationEventEmitter.addListener('locationUpdate', (coords: LocationCoords) => {
+      setLocation(coords);
+    });
+    return () => subscription.remove();
   }, []);
 
-  // Update polyline key to force re-render on locations change
-  useEffect(() => {
-    setPolylineKey((k) => k + 1);
-  }, [locations]);
-
-  // Start foreground tracking (with improved error handling)
-  const startForegroundTracking = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setErrorMsg("Foreground location permission denied");
-        Alert.alert(
-          "Permission denied",
-          "Please allow location access for the app to function properly."
-        );
-        return;
-      }
-      foregroundSubscription.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 10,
-        },
-        (location) => {
-          if (!location?.coords) return;
-          const newLoc: LocationPoint = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            timestamp: location.timestamp,
-          };
-          setLocations((current) => [...current, newLoc]);
-        }
-      );
-      setTrackingMode("foreground");
-      setErrorMsg(null);
-    } catch (e: any) {
-      setErrorMsg("Failed to start foreground tracking: " + e.message);
-      Alert.alert("Error", "Failed to start foreground tracking.");
-      console.error(e);
+  // Request permissions and start location tracking
+  const startLocationTracking = async (): Promise<void> => {
+    const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+    if (foregroundStatus !== 'granted') {
+      alert('Foreground location permission is required.');
+      return;
     }
+
+    const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+    if (backgroundStatus !== 'granted') {
+      alert('Background location permission is required.');
+      return;
+    }
+
+    // Start foreground subscription to get immediate updates while app is open
+    foregroundSubscription.current = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 10000, // every 10 seconds
+        distanceInterval: 10, // every 10 meters
+      },
+      (loc: Location.LocationObject) => {
+        setLocation(loc.coords);
+        console.log('Foreground location:', loc.coords);
+      }
+    );
+
+    // Start background location updates
+    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+      accuracy: Location.Accuracy.BestForNavigation,
+      timeInterval: 60000, // 1 minute (adjust as needed)
+      distanceInterval: 50, // 50 meters
+      showsBackgroundLocationIndicator: true, // iOS only
+      foregroundService: {
+        notificationTitle: 'Location Tracking',
+        notificationBody: 'Your location is being tracked in the background',
+        notificationColor: '#0000FF',
+      },
+      pausesUpdatesAutomatically: false,
+    });
+
+    setIsTracking(true);
   };
 
-  // Stop foreground tracking
-  const stopForegroundTracking = async () => {
+  // Stop location tracking
+  const stopLocationTracking = async (): Promise<void> => {
     if (foregroundSubscription.current) {
       foregroundSubscription.current.remove();
       foregroundSubscription.current = null;
     }
-    setTrackingMode("none");
+    await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    setIsTracking(false);
+    setLocation(null);
   };
 
-  // Start background tracking
-  const startBackgroundTracking = async () => {
-    try {
-      const { status: fgStatus } =
-        await Location.requestForegroundPermissionsAsync();
-      if (fgStatus !== "granted") {
-        setErrorMsg("Foreground location permission denied");
-        Alert.alert(
-          "Permission denied",
-          "Please allow location access for the app to function properly."
-        );
-        return;
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (foregroundSubscription.current) {
+        foregroundSubscription.current.remove();
+        foregroundSubscription.current = null;
       }
-      if (Platform.OS === "android") {
-        const { status: bgStatus } =
-          await Location.requestBackgroundPermissionsAsync();
-        if (bgStatus !== "granted") {
-          setErrorMsg("Background location permission denied");
-          Alert.alert(
-            "Permission denied",
-            "Please allow background location access for the app."
-          );
-          return;
-        }
-      }
-      const hasStarted = await Location.hasStartedLocationUpdatesAsync(
-        LOCATION_TASK_NAME
-      );
-      if (!hasStarted) {
-        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-          accuracy: Location.Accuracy.Low,
-          distanceInterval: 0,
-          deferredUpdatesInterval: 10,
-          showsBackgroundLocationIndicator: true,
-          foregroundService: {
-            notificationTitle: "Background Location Tracking",
-            notificationBody: "Your location is being tracked in the background",
-            notificationColor: "#FF0000",
-          },
-        });
-      }
-      setTrackingMode("background");
-      setErrorMsg(null);
-    } catch (e: any) {
-      setErrorMsg("Failed to start background tracking: " + e.message);
-      Alert.alert("Error", "Failed to start background tracking.");
-      console.error(e);
-    }
-  };
-
-  // Stop background tracking
-  const stopBackgroundTracking = async () => {
-    try {
-      const hasStarted = await Location.hasStartedLocationUpdatesAsync(
-        LOCATION_TASK_NAME
-      );
-      if (hasStarted) {
-        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-      }
-      setTrackingMode("none");
-    } catch (e: any) {
-      setErrorMsg("Failed to stop background tracking: " + e.message);
-      console.error(e);
-    }
-  };
-
-  // Unified start tracking
-  const startTracking = async (mode: "foreground" | "background") => {
-    setErrorMsg(null);
-    if (mode === "foreground") {
-      await startForegroundTracking();
-    } else if (mode === "background") {
-      await startBackgroundTracking();
-    }
-  };
-
-  // Unified stop tracking
-  const stopTracking = async () => {
-    if (trackingMode === "foreground") {
-      await stopForegroundTracking();
-    } else if (trackingMode === "background") {
-      await stopBackgroundTracking();
-    }
-    setTrackingMode("none");
-  };
+      Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Choose Location Tracking Mode</Text>
-
-      {trackingMode === "none" && (
-        <View>
-          <Button
-            title="Start Foreground Tracking"
-            onPress={() => startTracking("foreground")}
-          />
-          <View style={{ height: 10 }} />
-          <Button
-            title="Start Background Tracking"
-            onPress={() => startTracking("background")}
-          />
-        </View>
-      )}
-
-      {trackingMode !== "none" && (
-        <Button title="Stop Tracking" onPress={stopTracking} color="red" />
-      )}
-
-      <View style={styles.buttonRow}>
-        <Button title="Clear Locations" onPress={clearLocations} color="red" />
-        <Button title="Refresh Locations" onPress={loadLocations} />
-      </View>
-
-      {errorMsg ? <Text style={styles.error}>{errorMsg}</Text> : null}
-
-      {locations.length === 0 ? (
-        <Text>No location points recorded yet.</Text>
+      <Text style={styles.title}>Background Location Tracking</Text>
+      <Text>Latitude: {location ? location.latitude.toFixed(6) : 'N/A'}</Text>
+      <Text>Longitude: {location ? location.longitude.toFixed(6) : 'N/A'}</Text>
+      {!isTracking ? (
+        <Button title="Start Tracking" onPress={startLocationTracking} />
       ) : (
-        <>
-          {/* <MapView
-            showsBuildings={false}
-            showsIndoorLevelPicker={false}
-            style={styles.map}
-            initialRegion={{
-              latitude: locations[0]?.latitude || 0,
-              longitude: locations[0]?.longitude || 0,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-          >
-            {locations.map(
-              (loc, i) =>
-                (i === 0 || i === locations.length - 1) && (
-                  <Marker
-                    key={i.toString()}
-                    coordinate={{
-                      latitude: loc.latitude,
-                      longitude: loc.longitude,
-                    }}
-                    title={`Point ${i + 1}`}
-                    description={new Date(loc.timestamp).toLocaleString()}
-                  />
-                )
-            )}
-
-            {locations.length > 0 && (
-              <Polyline
-                key={polylineKey}
-                coordinates={locations.map((loc) => ({
-                  latitude: loc.latitude,
-                  longitude: loc.longitude,
-                }))}
-                strokeColor="#FF0000"
-                strokeWidth={3}
-              />
-            )}
-          </MapView> */}
-
-          <FlatList
-            style={styles.list}
-            data={locations}
-            keyExtractor={(_, index) => index.toString()}
-            renderItem={({ item, index }) => (
-              <Text style={styles.listItem}>
-                {index + 1}. Lat: {item.latitude.toFixed(6)}, Lon:{" "}
-                {item.longitude.toFixed(6)}
-                {"\n"}
-                Time: {new Date(item.timestamp).toLocaleString()}
-              </Text>
-            )}
-          />
-        </>
+        <Button title="Stop Tracking" onPress={stopLocationTracking} />
       )}
+      <Text style={styles.note}>
+        Note: Background location requires proper permissions and standalone build.
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, paddingTop: 50 },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 16,
-  },
-  error: { color: "red", textAlign: "center", marginBottom: 10 },
-  map: { width: "100%", height: 250, marginBottom: 16 },
-  list: { flex: 1 },
-  listItem: { marginBottom: 10, fontSize: 14 },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
+  note: { marginTop: 20, fontSize: 12, color: 'gray', textAlign: 'center' },
 });
