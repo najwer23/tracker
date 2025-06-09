@@ -12,7 +12,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const MIN_ACCURACY = 10; // meters, lowered for better precision
-const MIN_MOVE_DISTANCE = 10; // meters
+const MIN_MOVE_DISTANCE = 20; // meters
 const THROTTLE_TIME = 2000; // ms
 const SMOOTHING_WINDOW = 3; // number of points for moving average smoothing
 
@@ -178,7 +178,7 @@ export const Home: React.FC = () => {
 
   return (
     <div style={{ height: '100vh', width: '100%', padding: 10 }}>
-      <h1>Traveled Distance and Path 4.0</h1>
+      <h1>Traveled Distance and Path 5.0</h1>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
