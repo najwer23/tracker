@@ -11,8 +11,8 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const MIN_ACCURACY = 15; // meters, lowered for better precision
-const MIN_MOVE_DISTANCE = 5; // meters
+const MIN_ACCURACY = 10; // meters, lowered for better precision
+const MIN_MOVE_DISTANCE = 20; // meters
 const THROTTLE_TIME = 2000; // ms
 const SMOOTHING_WINDOW = 3; // number of points for moving average smoothing
 
