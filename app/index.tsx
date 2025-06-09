@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, Text, View, Button, NativeEventEmitter, NativeModules } from 'react-native';
+import { StyleSheet, Text, View, Button, ScrollView } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
@@ -40,6 +41,7 @@ TaskManager.defineTask(
 
 export default function App() {
   const [location, setLocation] = useState<LocationCoords | null>(null);
+  const [locationsList, setLocationsList] = useState<LocationCoords[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   const foregroundSubscription = useRef<Location.LocationSubscription | null>(null);
 
@@ -47,11 +49,18 @@ export default function App() {
   useEffect(() => {
     const subscription = locationEventEmitter.addListener('locationUpdate', (coords: LocationCoords) => {
       setLocation(coords);
+      setLocationsList(prev => [coords, ...prev]); // prepend new location
     });
     return () => subscription.remove();
   }, []);
 
-  // Request permissions and start location tracking
+  // Also update list on foreground location updates
+  const onForegroundLocationUpdate = (loc: Location.LocationObject) => {
+    setLocation(loc.coords);
+    setLocationsList(prev => [loc.coords, ...prev]);
+    console.log('Foreground location:', loc.coords);
+  };
+
   const startLocationTracking = async (): Promise<void> => {
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
     if (foregroundStatus !== 'granted') {
@@ -72,10 +81,7 @@ export default function App() {
         timeInterval: 10000, // every 10 seconds
         distanceInterval: 10, // every 10 meters
       },
-      (loc: Location.LocationObject) => {
-        setLocation(loc.coords);
-        console.log('Foreground location:', loc.coords);
-      }
+      onForegroundLocationUpdate
     );
 
     // Start background location updates
@@ -95,7 +101,6 @@ export default function App() {
     setIsTracking(true);
   };
 
-  // Stop location tracking
   const stopLocationTracking = async (): Promise<void> => {
     if (foregroundSubscription.current) {
       foregroundSubscription.current.remove();
@@ -104,9 +109,9 @@ export default function App() {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     setIsTracking(false);
     setLocation(null);
+    setLocationsList([]);
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (foregroundSubscription.current) {
@@ -127,6 +132,18 @@ export default function App() {
       ) : (
         <Button title="Stop Tracking" onPress={stopLocationTracking} />
       )}
+
+      <Text style={styles.listTitle}>Locations history:</Text>
+      <ScrollView style={styles.listContainer}>
+        {locationsList.length === 0 && <Text style={styles.noLocations}>No locations yet.</Text>}
+        {locationsList.map((loc, index) => (
+          <View key={index} style={styles.listItem}>
+            <Text>Lat: {loc.latitude.toFixed(6)}</Text>
+            <Text>Lng: {loc.longitude.toFixed(6)}</Text>
+          </View>
+        ))}
+      </ScrollView>
+
       <Text style={styles.note}>
         Note: Background location requires proper permissions and standalone build.
       </Text>
@@ -135,7 +152,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
+  container: { flex: 1, padding: 20, paddingTop: 50 },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+  listTitle: { marginTop: 20, fontWeight: 'bold', fontSize: 16 },
+  listContainer: { maxHeight: 700, marginTop: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10 },
+  listItem: { marginBottom: 8 },
+  noLocations: { fontStyle: 'italic', color: '#666' },
   note: { marginTop: 20, fontSize: 12, color: 'gray', textAlign: 'center' },
 });
