@@ -87,9 +87,9 @@ export default function App() {
     // Start background location updates
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       accuracy: Location.Accuracy.BestForNavigation,
-      timeInterval: 60000, // 1 minute (adjust as needed)
-      distanceInterval: 50, // 50 meters
-      showsBackgroundLocationIndicator: true, // iOS only
+      timeInterval: 300,
+      distanceInterval: 8,
+      showsBackgroundLocationIndicator: true, 
       foregroundService: {
         notificationTitle: 'Location Tracking',
         notificationBody: 'Your location is being tracked in the background',
