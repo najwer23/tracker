@@ -11,9 +11,10 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const MIN_ACCURACY = 30; // meters
+const MIN_ACCURACY = 15; // meters, lowered for better precision
 const MIN_MOVE_DISTANCE = 5; // meters
 const THROTTLE_TIME = 2000; // ms
+const SMOOTHING_WINDOW = 3; // number of points for moving average smoothing
 
 interface Position {
   latitude: number;
@@ -69,56 +70,81 @@ export const Home: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const lastPositionRef = useRef<Position | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
+  const recentPositionsRef = useRef<Position[]>([]); // For smoothing
 
-  const success = useCallback((pos: GeolocationPosition) => {
-    const now = Date.now();
+  // Simple moving average smoothing function
+  const smoothPosition = (newPos: Position): Position => {
+    recentPositionsRef.current.push(newPos);
+    if (recentPositionsRef.current.length > SMOOTHING_WINDOW) {
+      recentPositionsRef.current.shift();
+    }
+    const avgLat =
+      recentPositionsRef.current.reduce((sum, p) => sum + p.latitude, 0) /
+      recentPositionsRef.current.length;
+    const avgLon =
+      recentPositionsRef.current.reduce((sum, p) => sum + p.longitude, 0) /
+      recentPositionsRef.current.length;
+    const avgAccuracy =
+      recentPositionsRef.current.reduce((sum, p) => sum + p.accuracy, 0) /
+      recentPositionsRef.current.length;
+    return { latitude: avgLat, longitude: avgLon, accuracy: avgAccuracy };
+  };
 
-    // Throttle updates to once every THROTTLE_TIME ms
-    if (now - lastUpdateTimeRef.current < THROTTLE_TIME) return;
+  const success = useCallback(
+    (pos: GeolocationPosition) => {
+      const now = Date.now();
 
-    const newPos: Position = {
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      accuracy: pos.coords.accuracy,
-    };
+      // Throttle updates to once every THROTTLE_TIME ms
+      if (now - lastUpdateTimeRef.current < THROTTLE_TIME) return;
 
-    if (newPos.accuracy > MIN_ACCURACY) {
+      const rawPos: Position = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+      };
+
       // Ignore low accuracy points
-      return;
-    }
+      if (rawPos.accuracy > MIN_ACCURACY) {
+        return;
+      }
 
-    if (!startPosition) {
-      setStartPosition(newPos);
-      setPosition(newPos);
-      lastPositionRef.current = newPos;
-      setPath([[newPos.latitude, newPos.longitude]]);
-      setError(null);
-      lastUpdateTimeRef.current = now;
-      return;
-    }
+      // Smooth the position
+      const newPos = smoothPosition(rawPos);
 
-    if (lastPositionRef.current) {
-      const dist = getDistanceMeters(
-        lastPositionRef.current.latitude,
-        lastPositionRef.current.longitude,
-        newPos.latitude,
-        newPos.longitude
-      );
-
-      // Only update if moved enough and new position is more accurate or similar
-      if (
-        dist > MIN_MOVE_DISTANCE &&
-        newPos.accuracy <= lastPositionRef.current.accuracy + 10 // allow small accuracy increase
-      ) {
-        setDistance((prev) => prev + dist);
+      if (!startPosition) {
+        setStartPosition(newPos);
         setPosition(newPos);
         lastPositionRef.current = newPos;
-        setPath((prev) => [...prev, [newPos.latitude, newPos.longitude]]);
+        setPath([[newPos.latitude, newPos.longitude]]);
         setError(null);
         lastUpdateTimeRef.current = now;
+        return;
       }
-    }
-  }, [startPosition]);
+
+      if (lastPositionRef.current) {
+        const dist = getDistanceMeters(
+          lastPositionRef.current.latitude,
+          lastPositionRef.current.longitude,
+          newPos.latitude,
+          newPos.longitude
+        );
+
+        // Only update if moved enough and new position is more accurate or similar
+        if (
+          dist > MIN_MOVE_DISTANCE &&
+          newPos.accuracy <= lastPositionRef.current.accuracy + 10 // allow small accuracy increase
+        ) {
+          setDistance((prev) => prev + dist);
+          setPosition(newPos);
+          lastPositionRef.current = newPos;
+          setPath((prev) => [...prev, [newPos.latitude, newPos.longitude]]);
+          setError(null);
+          lastUpdateTimeRef.current = now;
+        }
+      }
+    },
+    [startPosition]
+  );
 
   const failure = useCallback((err: GeolocationPositionError) => {
     setError(`Error getting position: ${err.message}`);
@@ -147,11 +173,12 @@ export const Home: React.FC = () => {
     setError(null);
     lastPositionRef.current = null;
     lastUpdateTimeRef.current = 0;
+    recentPositionsRef.current = [];
   };
 
   return (
     <div style={{ height: '100vh', width: '100%', padding: 10 }}>
-      <h1>Traveled Distance and Path</h1>
+      <h1>Traveled Distance and Path 2.0</h1>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
@@ -208,7 +235,10 @@ export const Home: React.FC = () => {
               radius={position.accuracy}
               pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
             />
-            <Polyline positions={path} pathOptions={{ color: 'red', weight: 4 }} />
+            <Polyline
+              positions={path}
+              pathOptions={{ color: 'red', weight: 5, lineJoin: 'round', lineCap: 'round' }}
+            />
           </MapContainer>
         </>
       )}

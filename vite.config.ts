@@ -10,9 +10,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // devOptions: {
-      //   enabled: true,
-      // },
+      devOptions: {
+        enabled: true,
+      },
       manifest: {
         name: 'Tracker',
         short_name: 'Tracker',
