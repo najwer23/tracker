@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   MapContainer,
   Marker,
@@ -11,10 +11,11 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const MIN_ACCURACY = 10; // meters, lowered for better precision
-const MIN_MOVE_DISTANCE = 20; // meters
-const THROTTLE_TIME = 2000; // ms
-const SMOOTHING_WINDOW = 3; // number of points for moving average smoothing
+// Constants
+const MIN_ACCURACY = 10; // meters
+const MIN_MOVE_DISTANCE = 10; // meters, lowered for more frequent updates
+const THROTTLE_TIME = 150; // ms, throttle updates
+const SMOOTHING_WINDOW = 1; // disabled smoothing
 
 interface Position {
   latitude: number;
@@ -22,6 +23,7 @@ interface Position {
   accuracy: number;
 }
 
+// Custom marker icon
 const customIcon = L.icon({
   iconUrl: 'marker.svg',
   iconSize: [25, 41],
@@ -31,6 +33,7 @@ const customIcon = L.icon({
   shadowAnchor: [12, 41],
 });
 
+// Distance calculation helper
 function getDistanceMeters(
   lat1: number,
   lon1: number,
@@ -48,6 +51,7 @@ function getDistanceMeters(
   return R * c;
 }
 
+// Initial map view setter
 const SetInitialView: React.FC<{ position: Position }> = ({ position }) => {
   const map = useMap();
   const initialSet = useRef(false);
@@ -62,6 +66,27 @@ const SetInitialView: React.FC<{ position: Position }> = ({ position }) => {
   return null;
 };
 
+// Throttle helper
+function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+  let lastFunc: number;
+  let lastRan: number;
+  return function (this: any, ...args: any[]) {
+    const context = this;
+    if (!lastRan) {
+      func.apply(context, args);
+      lastRan = Date.now();
+    } else {
+      clearTimeout(lastFunc);
+      lastFunc = window.setTimeout(function () {
+        if ((Date.now() - lastRan) >= limit) {
+          func.apply(context, args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
+    }
+  } as T;
+}
+
 export const Home: React.FC = () => {
   const [position, setPosition] = useState<Position | null>(null);
   const [startPosition, setStartPosition] = useState<Position | null>(null);
@@ -69,10 +94,9 @@ export const Home: React.FC = () => {
   const [path, setPath] = useState<[number, number][]>([]);
   const [error, setError] = useState<string | null>(null);
   const lastPositionRef = useRef<Position | null>(null);
-  const lastUpdateTimeRef = useRef<number>(0);
-  const recentPositionsRef = useRef<Position[]>([]); // For smoothing
+  const recentPositionsRef = useRef<Position[]>([]);
 
-  // Simple moving average smoothing function
+  // Smoothing (effectively disabled here)
   const smoothPosition = (newPos: Position): Position => {
     recentPositionsRef.current.push(newPos);
     if (recentPositionsRef.current.length > SMOOTHING_WINDOW) {
@@ -90,25 +114,17 @@ export const Home: React.FC = () => {
     return { latitude: avgLat, longitude: avgLon, accuracy: avgAccuracy };
   };
 
-  const success = useCallback(
+  // Position update handler (throttled)
+  const updatePosition = useCallback(
     (pos: GeolocationPosition) => {
-      const now = Date.now();
-
-      // Throttle updates to once every THROTTLE_TIME ms
-      if (now - lastUpdateTimeRef.current < THROTTLE_TIME) return;
-
       const rawPos: Position = {
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
       };
 
-      // Ignore low accuracy points
-      if (rawPos.accuracy > MIN_ACCURACY) {
-        return;
-      }
+      if (rawPos.accuracy > MIN_ACCURACY) return;
 
-      // Smooth the position
       const newPos = smoothPosition(rawPos);
 
       if (!startPosition) {
@@ -117,7 +133,6 @@ export const Home: React.FC = () => {
         lastPositionRef.current = newPos;
         setPath([[newPos.latitude, newPos.longitude]]);
         setError(null);
-        lastUpdateTimeRef.current = now;
         return;
       }
 
@@ -129,22 +144,23 @@ export const Home: React.FC = () => {
           newPos.longitude
         );
 
-        // Only update if moved enough and new position is more accurate or similar
         if (
           dist > MIN_MOVE_DISTANCE &&
-          newPos.accuracy <= lastPositionRef.current.accuracy + 10 // allow small accuracy increase
+          newPos.accuracy <= lastPositionRef.current.accuracy + 10
         ) {
           setDistance((prev) => prev + dist);
           setPosition(newPos);
           lastPositionRef.current = newPos;
           setPath((prev) => [...prev, [newPos.latitude, newPos.longitude]]);
           setError(null);
-          lastUpdateTimeRef.current = now;
         }
       }
     },
     [startPosition]
   );
+
+  // Throttled version of updatePosition
+  const throttledUpdatePosition = useMemo(() => throttle(updatePosition, THROTTLE_TIME), [updatePosition]);
 
   const failure = useCallback((err: GeolocationPositionError) => {
     setError(`Error getting position: ${err.message}`);
@@ -156,14 +172,18 @@ export const Home: React.FC = () => {
       return;
     }
 
-    const watcherId = navigator.geolocation.watchPosition(success, failure, {
-      enableHighAccuracy: true,
-      maximumAge: 0,
-      timeout: 15000,
-    });
+    const watcherId = navigator.geolocation.watchPosition(
+      throttledUpdatePosition,
+      failure,
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 15000,
+      }
+    );
 
     return () => navigator.geolocation.clearWatch(watcherId);
-  }, [success, failure]);
+  }, [throttledUpdatePosition, failure]);
 
   const resetTracking = () => {
     setPosition(null);
@@ -172,13 +192,21 @@ export const Home: React.FC = () => {
     setPath([]);
     setError(null);
     lastPositionRef.current = null;
-    lastUpdateTimeRef.current = 0;
     recentPositionsRef.current = [];
   };
 
+  // Memoized Polyline to avoid unnecessary re-renders
+  const MemoizedPolyline = React.memo(({ positions }: { positions: [number, number][] }) => (
+    <Polyline
+      positions={positions}
+      pathOptions={{ color: 'red', weight: 5, lineJoin: 'round', lineCap: 'round' }}
+      renderer={L.canvas()}
+    />
+  ));
+
   return (
     <div style={{ height: '100vh', width: '100%', padding: 10 }}>
-      <h1>Traveled Distance and Path 5.0</h1>
+      <h1>Traveled Distance and Path (Improved)</h1>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
@@ -190,21 +218,18 @@ export const Home: React.FC = () => {
             <p>
               <strong>Start Position:</strong>
               <br />
-              Lat: {startPosition.latitude.toFixed(6)}, Lon:{' '}
-              {startPosition.longitude.toFixed(6)}
+              Lat: {startPosition.latitude.toFixed(6)}, Lon: {startPosition.longitude.toFixed(6)}
             </p>
             <p>
               <strong>Current Position:</strong>
               <br />
-              Lat: {position.latitude.toFixed(6)}, Lon:{' '}
-              {position.longitude.toFixed(6)}
+              Lat: {position.latitude.toFixed(6)}, Lon: {position.longitude.toFixed(6)}
             </p>
             <p>
               <strong>Accuracy:</strong> ±{position.accuracy.toFixed(1)} meters
             </p>
             <p>
-              <strong>Total Distance Traveled:</strong>{' '}
-              {(distance / 1000).toFixed(3)} km
+              <strong>Total Distance Traveled:</strong> {(distance / 1000).toFixed(3)} km
             </p>
             <button onClick={resetTracking} aria-label="Reset tracking">
               Reset Tracking
@@ -235,10 +260,7 @@ export const Home: React.FC = () => {
               radius={position.accuracy}
               pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
             />
-            <Polyline
-              positions={path}
-              pathOptions={{ color: 'red', weight: 5, lineJoin: 'round', lineCap: 'round' }}
-            />
+            <MemoizedPolyline positions={path} />
           </MapContainer>
         </>
       )}
