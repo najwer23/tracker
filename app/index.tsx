@@ -99,33 +99,40 @@ export default function LocationTracker() {
     setPolylineKey((k) => k + 1);
   }, [locations]);
 
-  // Start foreground tracking
+  // Start foreground tracking (with improved error handling)
   const startForegroundTracking = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      setErrorMsg("Foreground location permission denied");
-      Alert.alert(
-        "Permission denied",
-        "Please allow location access for the app to function properly."
-      );
-      return;
-    }
-    foregroundSubscription.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.High,
-        distanceInterval: 10,
-      },
-      (location) => {
-        const newLoc: LocationPoint = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          timestamp: location.timestamp,
-        };
-        setLocations((current) => [...current, newLoc]);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setErrorMsg("Foreground location permission denied");
+        Alert.alert(
+          "Permission denied",
+          "Please allow location access for the app to function properly."
+        );
+        return;
       }
-    );
-    setTrackingMode("foreground");
-    setErrorMsg(null);
+      foregroundSubscription.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 10,
+        },
+        (location) => {
+          if (!location?.coords) return;
+          const newLoc: LocationPoint = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            timestamp: location.timestamp,
+          };
+          setLocations((current) => [...current, newLoc]);
+        }
+      );
+      setTrackingMode("foreground");
+      setErrorMsg(null);
+    } catch (e: any) {
+      setErrorMsg("Failed to start foreground tracking: " + e.message);
+      Alert.alert("Error", "Failed to start foreground tracking.");
+      console.error(e);
+    }
   };
 
   // Stop foreground tracking
@@ -139,57 +146,68 @@ export default function LocationTracker() {
 
   // Start background tracking
   const startBackgroundTracking = async () => {
-    const { status: fgStatus } =
-      await Location.requestForegroundPermissionsAsync();
-    if (fgStatus !== "granted") {
-      setErrorMsg("Foreground location permission denied");
-      Alert.alert(
-        "Permission denied",
-        "Please allow location access for the app to function properly."
-      );
-      return;
-    }
-    if (Platform.OS === "android") {
-      const { status: bgStatus } =
-        await Location.requestBackgroundPermissionsAsync();
-      if (bgStatus !== "granted") {
-        setErrorMsg("Background location permission denied");
+    try {
+      const { status: fgStatus } =
+        await Location.requestForegroundPermissionsAsync();
+      if (fgStatus !== "granted") {
+        setErrorMsg("Foreground location permission denied");
         Alert.alert(
           "Permission denied",
-          "Please allow background location access for the app."
+          "Please allow location access for the app to function properly."
         );
         return;
       }
+      if (Platform.OS === "android") {
+        const { status: bgStatus } =
+          await Location.requestBackgroundPermissionsAsync();
+        if (bgStatus !== "granted") {
+          setErrorMsg("Background location permission denied");
+          Alert.alert(
+            "Permission denied",
+            "Please allow background location access for the app."
+          );
+          return;
+        }
+      }
+      const hasStarted = await Location.hasStartedLocationUpdatesAsync(
+        LOCATION_TASK_NAME
+      );
+      if (!hasStarted) {
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          accuracy: Location.Accuracy.Low,
+          distanceInterval: 0,
+          deferredUpdatesInterval: 10,
+          showsBackgroundLocationIndicator: true,
+          foregroundService: {
+            notificationTitle: "Background Location Tracking",
+            notificationBody: "Your location is being tracked in the background",
+            notificationColor: "#FF0000",
+          },
+        });
+      }
+      setTrackingMode("background");
+      setErrorMsg(null);
+    } catch (e: any) {
+      setErrorMsg("Failed to start background tracking: " + e.message);
+      Alert.alert("Error", "Failed to start background tracking.");
+      console.error(e);
     }
-    const hasStarted = await Location.hasStartedLocationUpdatesAsync(
-      LOCATION_TASK_NAME
-    );
-    if (!hasStarted) {
-      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-        accuracy: Location.Accuracy.High,
-        distanceInterval: 10,
-        deferredUpdatesInterval: 1000,
-        showsBackgroundLocationIndicator: true,
-        foregroundService: {
-          notificationTitle: "Background Location Tracking",
-          notificationBody: "Your location is being tracked in the background",
-          notificationColor: "#FF0000",
-        },
-      });
-    }
-    setTrackingMode("background");
-    setErrorMsg(null);
   };
 
   // Stop background tracking
   const stopBackgroundTracking = async () => {
-    const hasStarted = await Location.hasStartedLocationUpdatesAsync(
-      LOCATION_TASK_NAME
-    );
-    if (hasStarted) {
-      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    try {
+      const hasStarted = await Location.hasStartedLocationUpdatesAsync(
+        LOCATION_TASK_NAME
+      );
+      if (hasStarted) {
+        await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+      }
+      setTrackingMode("none");
+    } catch (e: any) {
+      setErrorMsg("Failed to stop background tracking: " + e.message);
+      console.error(e);
     }
-    setTrackingMode("none");
   };
 
   // Unified start tracking
@@ -245,20 +263,20 @@ export default function LocationTracker() {
         <Text>No location points recorded yet.</Text>
       ) : (
         <>
-          <MapView
+          {/* <MapView
             showsBuildings={false}
             showsIndoorLevelPicker={false}
             style={styles.map}
             initialRegion={{
-              latitude: locations[0].latitude,
-              longitude: locations[0].longitude,
+              latitude: locations[0]?.latitude || 0,
+              longitude: locations[0]?.longitude || 0,
               latitudeDelta: 0.01,
               longitudeDelta: 0.01,
             }}
           >
             {locations.map(
               (loc, i) =>
-                (i == 0 || i==locations.length-1) && (
+                (i === 0 || i === locations.length - 1) && (
                   <Marker
                     key={i.toString()}
                     coordinate={{
@@ -282,7 +300,7 @@ export default function LocationTracker() {
                 strokeWidth={3}
               />
             )}
-          </MapView>
+          </MapView> */}
 
           <FlatList
             style={styles.list}
