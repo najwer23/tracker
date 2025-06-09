@@ -14,7 +14,7 @@ import 'leaflet/dist/leaflet.css';
 // Constants
 const MIN_ACCURACY = 10; // meters
 const MIN_MOVE_DISTANCE = 10; // meters, lowered for more frequent updates
-const THROTTLE_TIME = 150; // ms, throttle updates
+const THROTTLE_TIME = 0; // ms, throttle updates
 const SMOOTHING_WINDOW = 1; // disabled smoothing
 
 interface Position {
