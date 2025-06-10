@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, Text, View, Button, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Button, Dimensions, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { NativeEventEmitter, NativeModules } from 'react-native';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 
 const LOCATION_TASK_NAME = 'background-location-task';
 
@@ -44,6 +45,8 @@ export default function App() {
   const [locationsList, setLocationsList] = useState<LocationCoords[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   const foregroundSubscription = useRef<Location.LocationSubscription | null>(null);
+
+  const { width, height } = Dimensions.get('window');
 
   // Subscribe to background location updates via event emitter
   useEffect(() => {
@@ -89,7 +92,7 @@ export default function App() {
       accuracy: Location.Accuracy.BestForNavigation,
       timeInterval: 300,
       distanceInterval: 8,
-      showsBackgroundLocationIndicator: true, 
+      showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: 'Location Tracking',
         notificationBody: 'Your location is being tracked in the background',
@@ -122,6 +125,21 @@ export default function App() {
     };
   }, []);
 
+  // Map region centered on latest location or fallback coords
+  const initialRegion = location
+    ? {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01 * (width / height),
+      }
+    : {
+        latitude: 37.78825,
+        longitude: -122.4324,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0922 * (width / height),
+      };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Background Location Tracking</Text>
@@ -133,16 +151,32 @@ export default function App() {
         <Button title="Stop Tracking" onPress={stopLocationTracking} />
       )}
 
-      <Text style={styles.listTitle}>Locations history:</Text>
-      <ScrollView style={styles.listContainer}>
-        {locationsList.length === 0 && <Text style={styles.noLocations}>No locations yet.</Text>}
+      <Text style={styles.listTitle}>Locations history on map:</Text>
+
+      <MapView
+        style={{ width: '100%', height: 400, marginTop: 10 }}
+        initialRegion={initialRegion}
+        showsUserLocation={true}
+        mapType={Platform.OS === 'android' ? 'none' : 'standard'}
+      >
+        <UrlTile
+          urlTemplate="https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
+          maximumZ={19}
+          flipY={false}
+          tileSize={256}
+        
+         
+        />
+
         {locationsList.map((loc, index) => (
-          <View key={index} style={styles.listItem}>
-            <Text>Lat: {loc.latitude.toFixed(6)}</Text>
-            <Text>Lng: {loc.longitude.toFixed(6)}</Text>
-          </View>
+          <Marker
+            key={index}
+            coordinate={{ latitude: loc.latitude, longitude: loc.longitude }}
+            title={`Point ${index + 1}`}
+            description={`Lat: ${loc.latitude.toFixed(6)}, Lng: ${loc.longitude.toFixed(6)}`}
+          />
         ))}
-      </ScrollView>
+      </MapView>
 
       <Text style={styles.note}>
         Note: Background location requires proper permissions and standalone build.
@@ -155,8 +189,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, paddingTop: 50 },
   title: { fontSize: 22, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
   listTitle: { marginTop: 20, fontWeight: 'bold', fontSize: 16 },
-  listContainer: { maxHeight: 700, marginTop: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10 },
-  listItem: { marginBottom: 8 },
-  noLocations: { fontStyle: 'italic', color: '#666' },
   note: { marginTop: 20, fontSize: 12, color: 'gray', textAlign: 'center' },
 });
