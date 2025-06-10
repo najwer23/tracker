@@ -14,46 +14,47 @@ export const initialMapHtml = `
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([51.0946, 17.0237], 18);
+    // const map = L.map('map').setView([37.33, -122.06], 17);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     const points = [];
     let polyline = null;
 
-    window.document.addEventListener('message', function(event) {
-      try {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'addMarker') {
-          const { latitude, longitude, index, accuracy } = data.payload;
+    function handleMessage(event) {
+        try {
+            const data = JSON.parse(event.data);
 
-          // Add point to array for polyline
-          points.push([latitude, longitude]);
+            console.log('Received message:', data);
 
-          const circleMarker = L.circleMarker([latitude, longitude], {
-            radius: 6,
-            fillColor: '#3388ff',
-            color: '#3388ff',
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8,
-          }).addTo(map);
+            if (data.type === "clearMarkers") {
+                if (polyline) {
+                    map.removeLayer(polyline);
+                    polyline = null;
+                }
+                points.length = 0;
+                console.log('All points cleared');
+            }
 
-          circleMarker.bindPopup('Point ' + (index + 1) + ': ' + latitude.toFixed(6) + ', ' + longitude.toFixed(6));
-
-          // Remove old polyline and add updated one
-          if (polyline) {
-            map.removeLayer(polyline);
-          }
-          polyline = L.polyline(points, { color: 'red', weight: 3 }).addTo(map);
-
-          // Pan to latest point
-          map.panTo([latitude, longitude]);
+            if (data.type === 'addMarker') {
+                const { latitude, longitude } = data.payload;
+                points.push([latitude, longitude]);
+                if (polyline) {
+                    map.removeLayer(polyline);
+                }
+                polyline = L.polyline(points, { color: 'red', weight: 3 }).addTo(map);
+                map.panTo([latitude, longitude]);
+                console.log('Added marker at:', latitude, longitude);
+            }
+        } catch (e) {
+            console.error('Failed to parse message', e);
         }
-      } catch (e) {
-        console.error('Failed to parse message', e);
-      }
-    });
+    }
+
+    // Listen for both iOS and Android
+    window.addEventListener('message', handleMessage, false);
+    document.addEventListener('message', handleMessage, false);
+
   </script>
 </body>
 </html>
