@@ -13,7 +13,7 @@ import './LocationTracker.task'
 
 export default function LocationTracker() {
   const [totalDistance, setTotalDistance] = useState(0);
-  const [location, setLocation] = useState<LocationCoords | null>(null);
+  // const [location, setLocation] = useState<LocationCoords | null>(null);
   const [locationsList, setLocationsList] = useState<LocationCoords[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -24,19 +24,19 @@ export default function LocationTracker() {
   );
   const messageQueue = useRef<string[]>([]);
 
-  useEffect(() => {
-    const loadLocation = async () => {
-      try {
-        const storedLocation = await AsyncStorage.getItem("latestLocation");
-        if (storedLocation) {
-          setLocation(JSON.parse(storedLocation));
-        }
-      } catch (error) {
-        console.error("Failed to load location:", error);
-      }
-    };
-    loadLocation();
-  }, []);
+  // useEffect(() => {
+  //   const loadLocation = async () => {
+  //     try {
+  //       const storedLocation = await AsyncStorage.getItem("latestLocation");
+  //       if (storedLocation) {
+  //         setLocation(JSON.parse(storedLocation));
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to load location:", error);
+  //     }
+  //   };
+  //   loadLocation();
+  // }, []);
 
   useEffect(() => {
     return () => {
@@ -79,7 +79,7 @@ export default function LocationTracker() {
   };
 
   const onForegroundLocationUpdate = async (loc: Location.LocationObject) => {
-    setLocation(loc.coords);
+    // setLocation(loc.coords);
 
     try {
       await AsyncStorage.setItem("latestLocation", JSON.stringify(loc.coords));
@@ -198,7 +198,8 @@ export default function LocationTracker() {
   return (
     <View style={style.container}>
       <Text style={style.title}>Background Location Tracking</Text>
-      <Text>Latitude: {location ? location.latitude.toFixed(6) : "N/A"}</Text>
+      
+      {/* <Text>Latitude: {location ? location.latitude.toFixed(6) : "N/A"}</Text>
       <Text>Longitude: {location ? location.longitude.toFixed(6) : "N/A"}</Text>
       <Text>Total distance: {(totalDistance / 1000).toFixed(2)} km</Text>
       {!isTracking ? (
@@ -209,7 +210,7 @@ export default function LocationTracker() {
 
       <Button title="Clear All Points" onPress={removeAllPoints} />
 
-      <Text style={style.listTitle}>Locations history on map:</Text>
+      <Text style={style.listTitle}>Locations history on map:</Text> */}
 
       <View style={style.mapContainer}>
         <WebView
@@ -225,6 +226,16 @@ export default function LocationTracker() {
           allowFileAccess={true}
         />
       </View>
+
+      <Text>Total distance: {(totalDistance / 1000).toFixed(2)} km</Text>
+      {!isTracking ? (
+        <Button title="Start Tracking" onPress={startLocationTracking} />
+      ) : (
+        <Button title="Stop Tracking" onPress={stopLocationTracking} />
+      )}
+
+      <Button title="Clear All Points" onPress={removeAllPoints} />
+      
     </View>
   );
 }

@@ -1,7 +1,17 @@
 import LocationTracker from "@/locationTracker/LocationTracker";
+import { useRouter } from "expo-router";
 
 import React from "react";
+import { View, Text, Button } from "react-native";
 
 export default function Index() {
-  return <LocationTracker />;
+  const router = useRouter();
+
+  return (
+    <>
+      <Text>kjhgfd</Text>
+
+      <LocationTracker />
+    </>
+  );
 }
