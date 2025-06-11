@@ -11,10 +11,16 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch"],
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "location",
+          "fetch"
+        ],
         "NSLocationWhenInUseUsageDescription": "This app uses your location to track your position.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to track it in the background."
-      }
+      },
+      "bundleIdentifier": "com.najwer23.tracker"
     },
     "android": {
       "config": {
