@@ -1,25 +1,28 @@
 // src/components/LocationTracker.tsx
 import React, { useEffect, useState, useRef } from "react";
-import { StyleSheet, Text, View, Button, Alert } from "react-native";
+import { Text, View, Button, Alert } from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { WebView } from "react-native-webview";
+import { WebView, WebViewMessageEvent } from "react-native-webview";
 
-import { initialMapHtml } from "@/leaflet/leaflet.const";
 import { LocationCoords } from "./locationTypes";
 import { styles } from "./locationTrackerStyles";
 import { getDistanceFromLatLonInMeters } from "./locationUtils";
 import { LOCATION_TASK_NAME } from "./locationConstants";
+import { initialMapHtml } from "@/leaflet/leaflet.const";
 
 export default function LocationTracker() {
   const [totalDistance, setTotalDistance] = useState(0);
   const [location, setLocation] = useState<LocationCoords | null>(null);
   const [locationsList, setLocationsList] = useState<LocationCoords[]>([]);
   const [isTracking, setIsTracking] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+
   const webviewRef = useRef<WebView>(null);
   const foregroundSubscription = useRef<Location.LocationSubscription | null>(
     null
   );
+  const messageQueue = useRef<string[]>([]);
 
   useEffect(() => {
     const loadLocation = async () => {
@@ -45,8 +48,39 @@ export default function LocationTracker() {
     };
   }, []);
 
+  useEffect(() => {
+    if (mapReady && webviewRef.current) {
+      messageQueue.current.forEach((msg) => {
+        webviewRef.current?.postMessage(msg);
+      });
+      messageQueue.current = [];
+    }
+  }, [mapReady]);
+
+  const sendMessageToWebView = (message: object) => {
+    const jsonMessage = JSON.stringify(message);
+    if (webviewRef.current && mapReady) {
+      webviewRef.current.postMessage(jsonMessage);
+    } else {
+      messageQueue.current.push(jsonMessage);
+    }
+  };
+
+  const onWebViewMessage = (event: WebViewMessageEvent) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === "mapReady") {
+        setMapReady(true);
+        console.log("Map is ready to receive messages");
+      }
+    } catch (e) {
+      console.error("Failed to parse message from WebView", e);
+    }
+  };
+
   const onForegroundLocationUpdate = async (loc: Location.LocationObject) => {
     setLocation(loc.coords);
+
     try {
       await AsyncStorage.setItem("latestLocation", JSON.stringify(loc.coords));
     } catch (e) {
@@ -67,18 +101,15 @@ export default function LocationTracker() {
         setTotalDistance((prevDist) => prevDist + dist);
       }
 
-      if (webviewRef.current) {
-        webviewRef.current.postMessage(
-          JSON.stringify({
-            type: "addMarker",
-            payload: {
-              ...loc.coords,
-              index: newList.length - 1,
-              accuracy: loc.coords.accuracy ?? 0,
-            },
-          })
-        );
-      }
+      sendMessageToWebView({
+        type: "addMarker",
+        payload: {
+          ...loc.coords,
+          index: newList.length - 1,
+          accuracy: loc.coords.accuracy ?? 0,
+        },
+      });
+
       return newList;
     });
   };
@@ -86,6 +117,7 @@ export default function LocationTracker() {
   const startLocationTracking = async (): Promise<void> => {
     const { status: foregroundStatus } =
       await Location.requestForegroundPermissionsAsync();
+
     if (foregroundStatus !== "granted") {
       Alert.alert(
         "Permission required",
@@ -96,6 +128,7 @@ export default function LocationTracker() {
 
     const { status: backgroundStatus } =
       await Location.requestBackgroundPermissionsAsync();
+
     if (backgroundStatus !== "granted") {
       Alert.alert(
         "Permission required",
@@ -104,13 +137,14 @@ export default function LocationTracker() {
       return;
     }
 
-    // Get initial location immediately
     try {
       const initialLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,
       });
-      console.log(initialLocation )
-      onForegroundLocationUpdate(initialLocation);
+
+      if (mapReady) {
+        onForegroundLocationUpdate(initialLocation);
+      }
     } catch (error) {
       console.error("Failed to get initial location:", error);
     }
@@ -152,14 +186,11 @@ export default function LocationTracker() {
 
   const removeAllPoints = () => {
     setTotalDistance(0);
+    setLocationsList([]);
 
-    if (webviewRef.current) {
-      webviewRef.current.postMessage(
-        JSON.stringify({
-          type: "clearMarkers",
-        })
-      );
-    }
+    sendMessageToWebView({
+      type: "clearMarkers",
+    });
   };
 
   return (
@@ -187,6 +218,9 @@ export default function LocationTracker() {
           scrollEnabled={false}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          onMessage={onWebViewMessage}
+          mixedContentMode="always"
+          allowFileAccess={true}
         />
       </View>
     </View>
