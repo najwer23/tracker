@@ -9,6 +9,7 @@ import { style } from "./LocationTracker.style";
 import { getDistanceFromLatLonInMeters } from "./LocationTracker.utils";
 import { LOCATION_TASK_NAME } from "./LocationTracker.const";
 import { initialMapHtml } from "@/leaflet/leaflet.const";
+import './LocationTracker.task'
 
 export default function LocationTracker() {
   const [totalDistance, setTotalDistance] = useState(0);
@@ -176,10 +177,12 @@ export default function LocationTracker() {
 
   const stopLocationTracking = async (): Promise<void> => {
     setIsTracking(false);
+
     if (foregroundSubscription.current) {
       foregroundSubscription.current.remove();
       foregroundSubscription.current = null;
     }
+
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
   };
 
