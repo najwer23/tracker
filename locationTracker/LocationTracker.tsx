@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Text, View, Button, Alert } from "react-native";
+import { Text, View, Alert, Button } from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
@@ -198,6 +198,8 @@ export default function LocationTracker() {
   return (
     <View style={style.container}>
       <Text style={style.title}>Background Location Tracking</Text>
+    
+
       
       {/* <Text>Latitude: {location ? location.latitude.toFixed(6) : "N/A"}</Text>
       <Text>Longitude: {location ? location.longitude.toFixed(6) : "N/A"}</Text>

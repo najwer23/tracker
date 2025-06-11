@@ -6,7 +6,7 @@ import { View, Text } from "react-native";
 export default function Blt() {
   return (
     <>
-      <Text>BLTWithoutMap</Text>
+    <Text>hhghg</Text>
     </>
   );
 }
