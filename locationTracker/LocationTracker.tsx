@@ -1,14 +1,13 @@
-// src/components/LocationTracker.tsx
 import React, { useEffect, useState, useRef } from "react";
 import { Text, View, Button, Alert } from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 
-import { LocationCoords } from "./locationTypes";
-import { styles } from "./locationTrackerStyles";
-import { getDistanceFromLatLonInMeters } from "./locationUtils";
-import { LOCATION_TASK_NAME } from "./locationConstants";
+import { LocationCoords } from "./LocationTracker.types";
+import { style } from "./LocationTracker.style";
+import { getDistanceFromLatLonInMeters } from "./LocationTracker.utils";
+import { LOCATION_TASK_NAME } from "./LocationTracker.const";
 import { initialMapHtml } from "@/leaflet/leaflet.const";
 
 export default function LocationTracker() {
@@ -194,8 +193,8 @@ export default function LocationTracker() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Background Location Tracking</Text>
+    <View style={style.container}>
+      <Text style={style.title}>Background Location Tracking</Text>
       <Text>Latitude: {location ? location.latitude.toFixed(6) : "N/A"}</Text>
       <Text>Longitude: {location ? location.longitude.toFixed(6) : "N/A"}</Text>
       <Text>Total distance: {(totalDistance / 1000).toFixed(2)} km</Text>
@@ -207,14 +206,14 @@ export default function LocationTracker() {
 
       <Button title="Clear All Points" onPress={removeAllPoints} />
 
-      <Text style={styles.listTitle}>Locations history on map:</Text>
+      <Text style={style.listTitle}>Locations history on map:</Text>
 
-      <View style={styles.mapContainer}>
+      <View style={style.mapContainer}>
         <WebView
           ref={webviewRef}
           originWhitelist={["*"]}
           source={{ html: initialMapHtml }}
-          style={styles.webview}
+          style={style.webview}
           scrollEnabled={false}
           javaScriptEnabled={true}
           domStorageEnabled={true}

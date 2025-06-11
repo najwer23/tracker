@@ -1,13 +1,7 @@
-
-import LocationTracker from "@/location/LocationTracker";
+import LocationTracker from "@/locationTracker/LocationTracker";
 
 import React from "react";
-import { SafeAreaProvider } from "react-native-safe-area-context"; // Optional but recommended for safe area handling
 
 export default function Index() {
-  return (
-    <SafeAreaProvider>
-      <LocationTracker />
-    </SafeAreaProvider>
-  );
+  return <LocationTracker />;
 }

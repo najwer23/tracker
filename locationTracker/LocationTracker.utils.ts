@@ -1,16 +1,14 @@
-// src/utils/locationUtils.ts
-
-export function deg2rad(deg: number): number {
+export const deg2rad = (deg: number): number => {
   return deg * (Math.PI / 180);
 }
 
-export function getDistanceFromLatLonInMeters(
+export const getDistanceFromLatLonInMeters = (
   lat1: number,
   lon1: number,
   lat2: number,
   lon2: number
-): number {
-  const R = 6371000; // Radius of the earth in meters
+): number => {
+  const R = 6371000;
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a =

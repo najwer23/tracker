@@ -1,7 +1,7 @@
 import * as TaskManager from "expo-task-manager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LOCATION_TASK_NAME } from "./locationConstants";
-import { LocationTaskData } from "./locationTypes";
+import { LOCATION_TASK_NAME } from "./LocationTracker.const";
+import { LocationTaskData } from "./LocationTracker.types";
 
 TaskManager.defineTask(
   LOCATION_TASK_NAME,

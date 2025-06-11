@@ -1,4 +1,3 @@
-// src/types/locationTypes.ts
 import * as Location from "expo-location";
 
 export interface LocationCoords {
