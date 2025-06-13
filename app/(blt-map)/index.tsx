@@ -2,7 +2,12 @@
 import { Spinner } from "@/spinner/Spinner";
 import { lazy, Suspense } from "react";
 
-const LocationTracker = lazy(() => import("./../../locationTracker/LocationTracker"));
+const LocationTracker = lazy(() =>
+  Promise.all([
+    import("./../../locationTracker/LocationTracker"),
+    new Promise(resolve => setTimeout(resolve, 2000))
+  ]).then(([module]) => module)
+);
 
 export default function Index() {
   return (
