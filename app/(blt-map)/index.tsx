@@ -5,7 +5,7 @@ import { lazy, Suspense } from "react";
 const LocationTracker = lazy(() =>
   Promise.all([
     import("./../../locationTracker/LocationTracker"),
-    new Promise(resolve => setTimeout(resolve, 2000))
+    new Promise(resolve => setTimeout(resolve, 1000))
   ]).then(([module]) => module)
 );
 
