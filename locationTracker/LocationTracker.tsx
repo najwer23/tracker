@@ -1,17 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
-import {
-  Text,
-  View,
-  Alert,
-  Pressable,
-} from "react-native";
+import { Text, View, Alert, Pressable } from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 
 import { LocationCoords } from "./LocationTracker.types";
 import { style } from "./LocationTracker.style";
-import { getDistanceFromLatLonInMeters } from "./LocationTracker.utils";
+import { formatDuration, getDistanceFromLatLonInMeters } from "./LocationTracker.utils";
 import { LOCATION_TASK_NAME } from "./LocationTracker.const";
 import { initialMapHtml } from "@/leaflet/leaflet.const";
 import "./LocationTracker.task";
@@ -23,6 +18,11 @@ export default function LocationTracker() {
   const [locationsList, setLocationsList] = useState<LocationCoords[]>([]);
   const [isTracking, setIsTracking] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [endTime, setEndTime] = useState<number | null>(null);
+  const [duration, setDuration] = useState(0);
+  const [accumulatedDuration, setAccumulatedDuration] = useState(0);
 
   const webviewRef = useRef<WebView>(null);
   const foregroundSubscription = useRef<Location.LocationSubscription | null>(
@@ -49,6 +49,24 @@ export default function LocationTracker() {
   //   };
   //   loadLocation();
   // }, []);
+
+  // Timer effect for live updating duration
+  useEffect(() => {
+    let timer: number | null = null;
+
+    if (isTracking && startTime !== null) {
+      timer = setInterval(() => {
+        setDuration(Date.now() - startTime + accumulatedDuration);
+      }, 1000);
+    } else {
+      setDuration(accumulatedDuration);
+      if (timer) clearInterval(timer);
+    }
+
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isTracking, startTime, accumulatedDuration]);
 
   useEffect(() => {
     return () => {
@@ -129,6 +147,8 @@ export default function LocationTracker() {
 
   const startLocationTracking = async (): Promise<void> => {
     setIsTracking(true);
+    setStartTime(Date.now());
+    setEndTime(null);
 
     const { status: foregroundStatus } =
       await Location.requestForegroundPermissionsAsync();
@@ -190,6 +210,13 @@ export default function LocationTracker() {
 
   const stopLocationTracking = async (): Promise<void> => {
     setIsTracking(false);
+    const now = Date.now();
+
+    if (startTime) {
+      setAccumulatedDuration((prev) => prev + (now - startTime));
+    }
+    setStartTime(null);
+    setEndTime(now);
 
     if (foregroundSubscription.current) {
       foregroundSubscription.current.remove();
@@ -202,6 +229,11 @@ export default function LocationTracker() {
   const removeAllPoints = () => {
     setTotalDistance(0);
     setLocationsList([]);
+    setStartTime(null);
+    setEndTime(null);
+    setDuration(0);
+    setAccumulatedDuration(0);
+    setIsTracking(false);
 
     sendMessageToWebView({
       type: "clearMarkers",
@@ -215,6 +247,13 @@ export default function LocationTracker() {
           <Text style={style.distanceText}>
             {(totalDistance / 1000).toFixed(2)} km
           </Text>
+          {startTime !== null || accumulatedDuration > 0 ? (
+            <Text style={{ fontSize: 16, color: "#888", marginBottom: 4 }}>
+              {isTracking
+                ? `Duration: ${formatDuration(duration)}`
+                : `Session time: ${formatDuration(duration)}`}
+            </Text>
+          ) : null}
         </View>
 
         <View
@@ -227,7 +266,7 @@ export default function LocationTracker() {
             <View style={[style.buttonWrapper]}>
               <Pressable
                 onPress={removeAllPoints}
-                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }} 
+                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }}
                 style={() => [style.button, style.buttonWrapperBin]}
               >
                 <FontAwesome name="trash" size={24} color="#fff" />
@@ -238,7 +277,7 @@ export default function LocationTracker() {
             <View style={style.buttonWrapper}>
               <Pressable
                 onPress={startLocationTracking}
-                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }} 
+                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }}
                 style={() => [style.button, style.buttonWrapperPlay]}
               >
                 <FontAwesome name="play" size={24} color="#fff" />
@@ -248,7 +287,7 @@ export default function LocationTracker() {
             <View style={style.buttonWrapper}>
               <Pressable
                 onPress={stopLocationTracking}
-                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }} 
+                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }}
                 style={() => [style.button, style.buttonWrapperPause]}
               >
                 <FontAwesome name="pause" size={24} color="#fff" />
@@ -274,19 +313,4 @@ export default function LocationTracker() {
       </View>
     </View>
   );
-}
-
-{
-  /* <Text>Latitude: {location ? location.latitude.toFixed(6) : "N/A"}</Text>
-      <Text>Longitude: {location ? location.longitude.toFixed(6) : "N/A"}</Text>
-      <Text>Total distance: {(totalDistance / 1000).toFixed(2)} km</Text>
-      {!isTracking ? (
-        <Button title="Start Tracking" onPress={startLocationTracking} />
-      ) : (
-        <Button title="Stop Tracking" onPress={stopLocationTracking} />
-      )}
-
-      <Button title="Clear All Points" onPress={removeAllPoints} />
-
-      <Text style={style.listTitle}>Locations history on map:</Text> */
 }

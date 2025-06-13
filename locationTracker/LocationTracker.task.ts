@@ -15,7 +15,7 @@ TaskManager.defineTask(
       const locationData = JSON.stringify(location.coords);
       try {
         await AsyncStorage.setItem("latestLocation", locationData);
-        console.log("Location saved to AsyncStorage");
+        // console.log("Location saved to AsyncStorage");
       } catch (e) {
         console.error("Failed to save location to AsyncStorage:", e);
       }
