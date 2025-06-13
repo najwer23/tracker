@@ -1,5 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Text, View, Alert, Button } from "react-native";
+import {
+  Text,
+  View,
+  Alert,
+  Pressable,
+} from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
@@ -9,7 +14,8 @@ import { style } from "./LocationTracker.style";
 import { getDistanceFromLatLonInMeters } from "./LocationTracker.utils";
 import { LOCATION_TASK_NAME } from "./LocationTracker.const";
 import { initialMapHtml } from "@/leaflet/leaflet.const";
-import './LocationTracker.task'
+import "./LocationTracker.task";
+import { FontAwesome } from "@expo/vector-icons";
 
 export default function LocationTracker() {
   const [totalDistance, setTotalDistance] = useState(0);
@@ -23,6 +29,12 @@ export default function LocationTracker() {
     null
   );
   const messageQueue = useRef<string[]>([]);
+
+  const isTrackingRef = useRef(isTracking);
+
+  useEffect(() => {
+    isTrackingRef.current = isTracking;
+  }, [isTracking]);
 
   // useEffect(() => {
   //   const loadLocation = async () => {
@@ -80,6 +92,7 @@ export default function LocationTracker() {
 
   const onForegroundLocationUpdate = async (loc: Location.LocationObject) => {
     // setLocation(loc.coords);
+    if (!isTrackingRef.current) return;
 
     try {
       await AsyncStorage.setItem("latestLocation", JSON.stringify(loc.coords));
@@ -115,6 +128,8 @@ export default function LocationTracker() {
   };
 
   const startLocationTracking = async (): Promise<void> => {
+    setIsTracking(true);
+
     const { status: foregroundStatus } =
       await Location.requestForegroundPermissionsAsync();
 
@@ -171,8 +186,6 @@ export default function LocationTracker() {
       },
       pausesUpdatesAutomatically: false,
     });
-
-    setIsTracking(true);
   };
 
   const stopLocationTracking = async (): Promise<void> => {
@@ -197,22 +210,53 @@ export default function LocationTracker() {
 
   return (
     <View style={style.container}>
-      <Text style={style.title}>Background Location Tracking</Text>
-    
+      <View style={style.containerStats}>
+        <View style={style.columnLeft}>
+          <Text style={style.distanceText}>
+            {(totalDistance / 1000).toFixed(2)} km
+          </Text>
+        </View>
 
-      
-      {/* <Text>Latitude: {location ? location.latitude.toFixed(6) : "N/A"}</Text>
-      <Text>Longitude: {location ? location.longitude.toFixed(6) : "N/A"}</Text>
-      <Text>Total distance: {(totalDistance / 1000).toFixed(2)} km</Text>
-      {!isTracking ? (
-        <Button title="Start Tracking" onPress={startLocationTracking} />
-      ) : (
-        <Button title="Stop Tracking" onPress={stopLocationTracking} />
-      )}
-
-      <Button title="Clear All Points" onPress={removeAllPoints} />
-
-      <Text style={style.listTitle}>Locations history on map:</Text> */}
+        <View
+          style={[
+            style.columnRight,
+            { flexDirection: "row", justifyContent: "space-between" },
+          ]}
+        >
+          <View style={style.buttonWrapper}>
+            <View style={[style.buttonWrapper]}>
+              <Pressable
+                onPress={removeAllPoints}
+                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }} 
+                style={() => [style.button, style.buttonWrapperBin]}
+              >
+                <FontAwesome name="trash" size={24} color="#fff" />
+              </Pressable>
+            </View>
+          </View>
+          {!isTracking ? (
+            <View style={style.buttonWrapper}>
+              <Pressable
+                onPress={startLocationTracking}
+                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }} 
+                style={() => [style.button, style.buttonWrapperPlay]}
+              >
+                <FontAwesome name="play" size={24} color="#fff" />
+              </Pressable>
+            </View>
+          ) : (
+            <View style={style.buttonWrapper}>
+              <Pressable
+                onPress={stopLocationTracking}
+                android_ripple={{ color: "rgba(0, 0, 0, 0.12)" }} 
+                style={() => [style.button, style.buttonWrapperPause]}
+              >
+                <FontAwesome name="pause" size={24} color="#fff" />
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </View>
 
       <View style={style.mapContainer}>
         <WebView
@@ -228,7 +272,13 @@ export default function LocationTracker() {
           allowFileAccess={true}
         />
       </View>
+    </View>
+  );
+}
 
+{
+  /* <Text>Latitude: {location ? location.latitude.toFixed(6) : "N/A"}</Text>
+      <Text>Longitude: {location ? location.longitude.toFixed(6) : "N/A"}</Text>
       <Text>Total distance: {(totalDistance / 1000).toFixed(2)} km</Text>
       {!isTracking ? (
         <Button title="Start Tracking" onPress={startLocationTracking} />
@@ -237,7 +287,6 @@ export default function LocationTracker() {
       )}
 
       <Button title="Clear All Points" onPress={removeAllPoints} />
-      
-    </View>
-  );
+
+      <Text style={style.listTitle}>Locations history on map:</Text> */
 }

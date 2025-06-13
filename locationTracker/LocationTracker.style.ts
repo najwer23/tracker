@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 
 export const style = StyleSheet.create({
-  container: { flex: 1, padding: 20, paddingTop: 50 },
+  container: { flex: 1, paddingTop: 20 },
   title: {
     fontSize: 22,
     fontWeight: "bold",
@@ -14,11 +14,61 @@ export const style = StyleSheet.create({
     marginTop: 10,
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 8,
     overflow: "hidden",
   },
   webview: {
     flex: 1,
     backgroundColor: "transparent",
+  },
+  containerStats: {
+    flexDirection: "row",
+    padding: 16,
+    alignItems: "center", // vertically center items in the row
+    justifyContent: "space-between",
+  },
+  columnLeft: {
+    flex: 1,
+    justifyContent: "space-around", // align content to top of the column
+  },
+  distanceText: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  columnRight: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 20
+  },
+  buttonWrapper: {
+    marginVertical: 6,
+  },
+  buttonWrapperPlay:{
+    backgroundColor: "#228B22"
+  },
+   buttonWrapperBin:{
+    backgroundColor: "red"
+  },
+  buttonWrapperPause: {
+    backgroundColor: "orange"
+  },
+  button: {
+    flexDirection: "row",
+    backgroundColor: "#007AFF",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  icon: {
+    marginRight: 8,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  buttonPressed: {
+    backgroundColor: "#005BBB", // fallback pressed color for iOS
   },
 });
