@@ -8,7 +8,7 @@ export class SimpleKalmanFilter {
   private cov: number | null;
   private x: number | null;
 
-  constructor(R = 10, Q = 0.6) {
+  constructor(R = 6, Q = 0.3) {
     this.R = R;
     this.Q = Q;
     this.A = 1;
