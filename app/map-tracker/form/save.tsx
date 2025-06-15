@@ -1,31 +1,12 @@
+import { JwtContext } from "@/api/jwt.context";
 import { useLocationTracker } from "@/locationTracker/LocationTracker.context";
-import { FormTabParamList } from "@/navigation/Navigation.types";
-import { NavigationProp } from "@react-navigation/native";
-import { useNavigation, usePathname, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { Text, View, ActivityIndicator, Button } from "react-native";
-import SessionStorage from "react-native-session-storage";
+import { useRouter } from "expo-router";
+import { useContext } from "react";
+import { View, Text, Button, StyleSheet } from "react-native";
 
 export default function Save() {
+  const { isAuthenticated } = useContext(JwtContext);
   const router = useRouter();
-  const path = usePathname();
-  const navigation = useNavigation<NavigationProp<FormTabParamList>>();
-
-  useEffect(() => {
-    checkAuth();
-
-    async function checkAuth() {
-      const token = await SessionStorage.getItem("tokenJWTaccess");
-
-      if (!token && path == "/map-tracker/form/form/Save") {
-        console.log(token, path);
-        router.push({
-          pathname: "/auth/login",
-          params: { from: "/map-tracker/form/form/Save", initialTab: "Save" },
-        });
-      }
-    }
-  }, [path, router]);
 
   const {
     duration,
@@ -35,10 +16,44 @@ export default function Save() {
     setTotalDistance,
   } = useLocationTracker();
 
+  if (!isAuthenticated) {
+    // Show login prompt card
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>
+          Please log in to access Save feature.
+        </Text>
+        <Button
+          title="Go to Login"
+          onPress={() =>
+            router.push({
+              pathname: "/auth/login",
+              params: { redirectTo: "map-tracker" },
+            })
+          }
+        />
+      </View>
+    );
+  }
+
   return (
-    <View>
+    <View style={styles.container}>
+      <Text>Welcome to Save screen!</Text>
       <Text>{duration}</Text>
-      <Button title="Go to Home" onPress={() => router.push("/")} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  message: {
+    fontSize: 18,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+});

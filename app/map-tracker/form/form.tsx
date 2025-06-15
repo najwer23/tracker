@@ -1,25 +1,20 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import Save from "./save";
 import Blt from "./blt";
-import { useLocalSearchParams } from "expo-router";
-import { FormTabParamList } from "@/navigation/Navigation.types";
+import Save from "./save";
 
-const Tab = createMaterialTopTabNavigator<FormTabParamList>();
+const Tab = createMaterialTopTabNavigator();
 
-export default function Form() {
-  const { initialTab } = useLocalSearchParams<{ initialTab?: string }>();
-
+export default function FormTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
         lazy: true,
         swipeEnabled: false,
-        animationEnabled: initialTab != "Save",
       }}
     >
-      <Tab.Screen key={"blt"} name="Blt" component={Blt} />
-      <Tab.Screen key={"save"} name="Save" component={Save} />
+      <Tab.Screen name="Map" component={Blt} />
+      <Tab.Screen name="Save" component={Save} />
     </Tab.Navigator>
   );
 }

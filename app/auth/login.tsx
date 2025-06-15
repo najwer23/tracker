@@ -3,8 +3,10 @@ import { useForm, Controller } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { Spinner } from "@/spinner/Spinner";
 import { queryLogin } from "@/api/login.query";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useEffect } from "react";
+import { NavigationProp } from "@react-navigation/native";
+import { RootStackParamList } from "@/navigation/Navigation.types";
 
 export default function Login() {
   const {
@@ -15,10 +17,7 @@ export default function Login() {
 
   const router = useRouter();
 
-  const { from } = useLocalSearchParams<{
-    from?: string;
-    initialTab?: string;
-  }>();
+  const { redirectTo } = useLocalSearchParams<{ redirectTo?: string }>();
 
   const { mutate, isPending, isError, data, error } = useMutation({
     mutationKey: ["queryLogin", "queryLogin"],
@@ -31,15 +30,11 @@ export default function Login() {
 
   useEffect(() => {
     if (data?.code === "OK") {
-      if (from == "/map-tracker/form/form/Save") {
+      if (redirectTo == "map-tracker") {
         router.replace("/auth/login");
-        router.push({
-          pathname: "/map-tracker/form/form",
-          params: { initialTab: "Save" },
-        });
+        router.replace("/map-tracker/form/form");
       } else {
-        router.replace("/auth/login");
-         router.replace('/')
+        router.push("/");
       }
     }
   }, [data, router]);
@@ -94,7 +89,9 @@ export default function Login() {
         <Text style={styles.errorText}>{errors.pass.message}</Text>
       )}
 
-      <Button title="Login" onPress={handleSubmit(onSubmit)} />
+      <View style={{ width: "100%", height: 70 }}>
+        <Button title="Login" onPress={handleSubmit(onSubmit)} />
+      </View>
 
       {isError && (
         <Text style={styles.errorText}>
@@ -107,7 +104,10 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     padding: 20,
+    justifyContent: "center", // centers vertically
+    alignItems: "center", // centers horizontally
   },
   input: {
     borderWidth: 1,
@@ -115,6 +115,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 10,
     marginBottom: 10,
+    color: "black",
+    width: "100%", // make inputs full width inside container
   },
   errorInput: {
     borderColor: "red",
@@ -123,5 +125,6 @@ const styles = StyleSheet.create({
   errorText: {
     color: "red",
     marginBottom: 10,
+    alignSelf: "flex-start", // align error text to left, not center
   },
 });

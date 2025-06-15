@@ -1,15 +1,15 @@
-import { useEffect } from "react";
-import { useFocusEffect, usePathname, useRouter } from "expo-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useContext, useEffect } from "react";
+import { usePathname, useRouter } from "expo-router";
+import { useMutation } from "@tanstack/react-query";
 import { queryLogout } from "@/api/logout.query";
 import { Spinner } from "@/spinner/Spinner";
-import { FormTabParamList } from "@/navigation/Navigation.types";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
+
+import { JwtContext } from "@/api/jwt.context";
 
 export default function Logout() {
   const router = useRouter();
   const path = usePathname();
-  const navigation = useNavigation<NavigationProp<FormTabParamList>>();
+  const { refreshToken } = useContext(JwtContext);
 
   const { mutate, data } = useMutation({
     mutationKey: ["queryLogout", "queryLogout"],
@@ -24,7 +24,7 @@ export default function Logout() {
 
   useEffect(() => {
     if (data?.code === "OK") {
-      router.replace("/auth/login");
+      refreshToken();
       router.replace("/");
     }
   }, [data]);
