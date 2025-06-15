@@ -11,12 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": [
-          "location",
-          "fetch",
-          "location",
-          "fetch"
-        ],
+        "UIBackgroundModes": ["location", "fetch", "location", "fetch"],
         "NSLocationWhenInUseUsageDescription": "This app uses your location to track your position.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to track it in the background."
       },
@@ -62,6 +57,8 @@
     },
     "extra": {
       "router": {},
+      "NAJWER23API_FASTIFY_ORIGIN_DEV": "http://192.168.1.21:4000",
+      "NAJWER23API_FASTIFY_ORIGIN_PROD": "https://najwer23api-fastify.vercel.app",
       "eas": {
         "projectId": "615e9ed5-1eb0-481d-ac0e-7f8ae7af0e9d"
       }

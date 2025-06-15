@@ -4,53 +4,41 @@ import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 
-import { LocationCoords } from "./LocationTracker.types";
 import { style } from "./LocationTracker.style";
-import { formatDuration, getDistanceFromLatLonInMeters } from "./LocationTracker.utils";
+import {
+  formatDuration,
+  getDistanceFromLatLonInMeters,
+} from "./LocationTracker.utils";
 import { LOCATION_TASK_NAME } from "./LocationTracker.const";
 import { initialMapHtml } from "@/leaflet/leaflet.const";
 import "./LocationTracker.task";
 import { FontAwesome } from "@expo/vector-icons";
+import { useLocationTracker } from "./LocationTracker.context";
 
 export default function LocationTracker() {
-  const [totalDistance, setTotalDistance] = useState(0);
-  // const [location, setLocation] = useState<LocationCoords | null>(null);
-  const [locationsList, setLocationsList] = useState<LocationCoords[]>([]);
+  const {
+    duration,
+    totalDistance,
+    setLocationsList,
+    setDuration,
+    setTotalDistance,
+  } = useLocationTracker();
+
   const [isTracking, setIsTracking] = useState(false);
   const [mapReady, setMapReady] = useState(false);
-
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [endTime, setEndTime] = useState<number | null>(null);
-  const [duration, setDuration] = useState(0);
   const [accumulatedDuration, setAccumulatedDuration] = useState(0);
-
   const webviewRef = useRef<WebView>(null);
   const foregroundSubscription = useRef<Location.LocationSubscription | null>(
     null
   );
   const messageQueue = useRef<string[]>([]);
-
   const isTrackingRef = useRef(isTracking);
 
   useEffect(() => {
     isTrackingRef.current = isTracking;
   }, [isTracking]);
 
-  // useEffect(() => {
-  //   const loadLocation = async () => {
-  //     try {
-  //       const storedLocation = await AsyncStorage.getItem("latestLocation");
-  //       if (storedLocation) {
-  //         setLocation(JSON.parse(storedLocation));
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to load location:", error);
-  //     }
-  //   };
-  //   loadLocation();
-  // }, []);
-
-  // Timer effect for live updating duration
   useEffect(() => {
     let timer: number | null = null;
 
@@ -148,7 +136,6 @@ export default function LocationTracker() {
   const startLocationTracking = async (): Promise<void> => {
     setIsTracking(true);
     setStartTime(Date.now());
-    setEndTime(null);
 
     const { status: foregroundStatus } =
       await Location.requestForegroundPermissionsAsync();
@@ -216,7 +203,6 @@ export default function LocationTracker() {
       setAccumulatedDuration((prev) => prev + (now - startTime));
     }
     setStartTime(null);
-    setEndTime(now);
 
     if (foregroundSubscription.current) {
       foregroundSubscription.current.remove();
@@ -230,7 +216,6 @@ export default function LocationTracker() {
     setTotalDistance(0);
     setLocationsList([]);
     setStartTime(null);
-    setEndTime(null);
     setDuration(0);
     setAccumulatedDuration(0);
     setIsTracking(false);

@@ -1,0 +1,127 @@
+import { View, TextInput, Button, Text, StyleSheet } from "react-native";
+import { useForm, Controller } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import { Spinner } from "@/spinner/Spinner";
+import { queryLogin } from "@/api/login.query";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect } from "react";
+
+export default function Login() {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
+  const router = useRouter();
+
+  const { from } = useLocalSearchParams<{
+    from?: string;
+    initialTab?: string;
+  }>();
+
+  const { mutate, isPending, isError, data, error } = useMutation({
+    mutationKey: ["queryLogin", "queryLogin"],
+    mutationFn: queryLogin,
+  });
+
+  const onSubmit = (data: any) => {
+    mutate(data);
+  };
+
+  useEffect(() => {
+    if (data?.code === "OK") {
+      if (from == "/map-tracker/form/form/Save") {
+        router.replace("/auth/login");
+        router.push({
+          pathname: "/map-tracker/form/form",
+          params: { initialTab: "Save" },
+        });
+      } else {
+        router.replace("/auth/login");
+         router.replace('/')
+      }
+    }
+  }, [data, router]);
+
+  if (isPending) {
+    return <Spinner />;
+  }
+
+  return (
+    <View style={styles.container}>
+      <Controller
+        control={control}
+        name="email"
+        defaultValue={"najwer23@gmail.com"}
+        rules={{
+          required: "Email is required",
+          pattern: {
+            value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: "Please enter a valid email address",
+          },
+        }}
+        render={({ field: { onChange, value } }) => (
+          <TextInput
+            placeholder="Email"
+            style={[styles.input, errors.email && styles.errorInput]}
+            onChangeText={onChange}
+            value={value}
+            autoCapitalize="none"
+          />
+        )}
+      />
+      {errors.email && typeof errors.email.message === "string" && (
+        <Text style={styles.errorText}>{errors.email.message}</Text>
+      )}
+
+      <Controller
+        control={control}
+        name="pass"
+        defaultValue={"1"}
+        rules={{ required: "Password is required" }}
+        render={({ field: { onChange, value } }) => (
+          <TextInput
+            placeholder="Password"
+            style={[styles.input, errors.pass && styles.errorInput]}
+            onChangeText={onChange}
+            value={value}
+            secureTextEntry
+          />
+        )}
+      />
+      {errors.pass && typeof errors.pass.message === "string" && (
+        <Text style={styles.errorText}>{errors.pass.message}</Text>
+      )}
+
+      <Button title="Login" onPress={handleSubmit(onSubmit)} />
+
+      {isError && (
+        <Text style={styles.errorText}>
+          The login is not correct or the user does not exist in the database!
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#999",
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 10,
+  },
+  errorInput: {
+    borderColor: "red",
+    marginBottom: 0,
+  },
+  errorText: {
+    color: "red",
+    marginBottom: 10,
+  },
+});
