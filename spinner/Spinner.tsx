@@ -1,9 +1,12 @@
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 
 export const Spinner = () => {
   return (
     <View style={[styles.container, styles.horizontal]}>
-      <ActivityIndicator size={60} color="#007AFF" />
+      <ActivityIndicator
+        size={Platform.OS === "ios" ? "large" : 60}
+        color="#007AFF"
+      />
     </View>
   );
 };

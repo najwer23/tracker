@@ -8,18 +8,11 @@ export const queryLogout = async (): Promise<ResponseBase> => {
   const response = await fetch(url, options);
   const data = await response.json();
 
-   try {
-    console.log("removed!", SessionStorage)
-    SessionStorage.removeItem("tokenJWTaccess");
-    
-  } catch (e) {
-    console.error("Failed to remove token from session storage", e);
-  }
+  SessionStorage.removeItem("tokenJWTaccess");
 
   if (data.error) {
-    console.log(4545555,data)
     throw Error(data.message);
   }
-  
+
   return data;
 };

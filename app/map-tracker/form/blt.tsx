@@ -21,6 +21,7 @@ export default function Blt() {
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
+    console.log(0, initialTab)
 
     async function handleNavigation() {
       setIsLoading(true);

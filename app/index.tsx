@@ -97,6 +97,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   container: {
+     flex: 1,    
     padding: 20,
     backgroundColor: "#fff",
   },
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#007AFF",
-    marginBottom: 12,
+    marginTop: 40,
     textAlign: "center",
   },
   subtitle: {

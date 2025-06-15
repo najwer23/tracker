@@ -16,12 +16,13 @@ export default function Save() {
 
     async function checkAuth() {
       const token = await SessionStorage.getItem("tokenJWTaccess");
+
       if (!token && path == "/map-tracker/form/form/Save") {
+        console.log(token, path);
         router.push({
           pathname: "/auth/login",
           params: { from: "/map-tracker/form/form/Save", initialTab: "Save" },
         });
-        navigation.navigate("Blt");
       }
     }
   }, [path, router]);
