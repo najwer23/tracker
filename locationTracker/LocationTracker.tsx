@@ -14,6 +14,9 @@ import { initialMapHtml } from "@/leaflet/leaflet.const";
 import "./LocationTracker.task";
 import { FontAwesome } from "@expo/vector-icons";
 import { useLocationTracker } from "./LocationTracker.context";
+import { SimpleKalmanFilter } from "./LocationTracker.kalman";
+
+// --- Kalman filter import
 
 export default function LocationTracker() {
   const {
@@ -34,6 +37,10 @@ export default function LocationTracker() {
   );
   const messageQueue = useRef<string[]>([]);
   const isTrackingRef = useRef(isTracking);
+
+  // --- Kalman filter refs
+  const latFilter = useRef(new SimpleKalmanFilter());
+  const lonFilter = useRef(new SimpleKalmanFilter());
 
   useEffect(() => {
     isTrackingRef.current = isTracking;
@@ -96,26 +103,35 @@ export default function LocationTracker() {
     }
   };
 
+  // --- Kalman filter applied here!
   const onForegroundLocationUpdate = async (loc: Location.LocationObject) => {
-    // setLocation(loc.coords);
     if (!isTrackingRef.current) return;
 
+    const filteredLat = latFilter.current.filter(loc.coords.latitude);
+    const filteredLon = lonFilter.current.filter(loc.coords.longitude);
+
+    const filteredCoords = {
+      ...loc.coords,
+      latitude: filteredLat,
+      longitude: filteredLon,
+    };
+
     try {
-      await AsyncStorage.setItem("latestLocation", JSON.stringify(loc.coords));
+      await AsyncStorage.setItem("latestLocation", JSON.stringify(filteredCoords));
     } catch (e) {
       console.error("Failed to save location to AsyncStorage:", e);
     }
 
     setLocationsList((prev) => {
-      const newList = [loc.coords, ...prev];
+      const newList = [filteredCoords, ...prev];
 
       if (prev.length > 0) {
         const prevPoint = prev[0];
         const dist = getDistanceFromLatLonInMeters(
           prevPoint.latitude,
           prevPoint.longitude,
-          loc.coords.latitude,
-          loc.coords.longitude
+          filteredCoords.latitude,
+          filteredCoords.longitude
         );
         setTotalDistance((prevDist) => prevDist + dist);
       }
@@ -123,9 +139,9 @@ export default function LocationTracker() {
       sendMessageToWebView({
         type: "addMarker",
         payload: {
-          ...loc.coords,
+          ...filteredCoords,
           index: newList.length - 1,
-          accuracy: loc.coords.accuracy ?? 0,
+          accuracy: filteredCoords.accuracy ?? 0,
         },
       });
 
