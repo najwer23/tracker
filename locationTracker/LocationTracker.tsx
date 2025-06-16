@@ -16,14 +16,14 @@ import { FontAwesome } from "@expo/vector-icons";
 import { useLocationTracker } from "./LocationTracker.context";
 import { SimpleKalmanFilter } from "./LocationTracker.kalman";
 
-// --- Kalman filter import
-
 export default function LocationTracker() {
   const {
     qValue,
     rValue,
     duration,
     totalDistance,
+    maxAccuracy,
+    setMaxAccuracy,
     setLocationsList,
     setDuration,
     setTotalDistance,
@@ -111,12 +111,15 @@ export default function LocationTracker() {
     }
   };
 
-  // --- Kalman filter applied here!
   const onForegroundLocationUpdate = async (loc: Location.LocationObject) => {
     if (!isTrackingRef.current) return;
 
-    const filteredLat = latFilter.current.filter(loc.coords.latitude);
-    const filteredLon = lonFilter.current.filter(loc.coords.longitude);
+    if (loc.coords.accuracy && loc.coords.accuracy > Number(maxAccuracy) ) {
+      return;
+    }
+
+    const filteredLat = loc.coords.latitude;
+    const filteredLon = loc.coords.longitude;
 
     const filteredCoords = {
       ...loc.coords,
@@ -202,7 +205,7 @@ export default function LocationTracker() {
       {
         accuracy: Location.Accuracy.Highest,
         timeInterval: 0,
-        distanceInterval: 10,
+        distanceInterval: 0,
       },
       onForegroundLocationUpdate
     );
@@ -211,7 +214,7 @@ export default function LocationTracker() {
       accuracy: Location.Accuracy.Highest,
       activityType: Location.ActivityType.Fitness,
       timeInterval: 0,
-      distanceInterval: 10,
+      distanceInterval: 0,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: "Location Tracking",
@@ -257,24 +260,38 @@ export default function LocationTracker() {
       
        <View style={{ flexDirection: "row", justifyContent: "space-between", margin: 12 }}>
         <View style={{ flex: 1, marginRight: 8 }}>
-          <Text>Q (Process noise)</Text>
+          <Text>Q (ProcN)</Text>
           <TextInput
-            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4 }}
+            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4, color: 'black' }}
             keyboardType="numeric"
             value={qValue.toString()}
             onChangeText={text => setQValue(text)}
             placeholder="Q"
+            editable={!isTracking}
             inputMode="decimal"
           />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text>R (Measurement noise)</Text>
+        <View style={{ flex: 1,  marginRight: 8 }}>
+          <Text>R (MeasN)</Text>
           <TextInput
-            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4 }}
+            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4, color: 'black' }}
             keyboardType="numeric"
             value={rValue.toString()}
             onChangeText={text => setRValue(text)}
+            editable={!isTracking}
             placeholder="R"
+            inputMode="decimal"
+          />
+        </View>
+        <View style={{ flex: 1, }}>
+          <Text>Max. Accuracy</Text>
+          <TextInput
+            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4, color: 'black' }}
+            keyboardType="numeric"
+            value={maxAccuracy.toString()}
+            editable={!isTracking}
+            onChangeText={text => setMaxAccuracy(text)}
+            placeholder="Accuracy"
             inputMode="decimal"
           />
         </View>

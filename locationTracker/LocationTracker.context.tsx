@@ -12,6 +12,8 @@ type LocationTrackerContextType = {
   setQValue: React.Dispatch<React.SetStateAction<string>>;
   rValue: string;
   setRValue: React.Dispatch<React.SetStateAction<string>>;
+  maxAccuracy: string;
+  setMaxAccuracy: React.Dispatch<React.SetStateAction<string>>;
 };
 
 const LocationTrackerContext = createContext<
@@ -28,13 +30,15 @@ export const LocationTrackerProvider = ({
   const [locationsList, setLocationsList] = useState<LocationCoords[]>([]);
   const [duration, setDuration] = useState(0);
   const [totalDistance, setTotalDistance] = useState(0);
-  const [rValue, setRValue] = useState('5');
-  const [qValue, setQValue] = useState('0.2');
-  
+  const [rValue, setRValue] = useState("5");
+  const [qValue, setQValue] = useState("0.2");
+  const [maxAccuracy, setMaxAccuracy] = useState("10");
 
   return (
     <LocationTrackerContext.Provider
       value={{
+        maxAccuracy,
+        setMaxAccuracy,
         qValue,
         setQValue,
         rValue,
