@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Text, View, Alert, Pressable } from "react-native";
+import { Text, View, Alert, Pressable, TextInput } from "react-native";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
@@ -20,11 +20,15 @@ import { SimpleKalmanFilter } from "./LocationTracker.kalman";
 
 export default function LocationTracker() {
   const {
+    qValue,
+    rValue,
     duration,
     totalDistance,
     setLocationsList,
     setDuration,
     setTotalDistance,
+    setQValue,
+    setRValue
   } = useLocationTracker();
 
   const [isTracking, setIsTracking] = useState(false);
@@ -38,9 +42,13 @@ export default function LocationTracker() {
   const messageQueue = useRef<string[]>([]);
   const isTrackingRef = useRef(isTracking);
 
-  // --- Kalman filter refs
-  const latFilter = useRef(new SimpleKalmanFilter());
-  const lonFilter = useRef(new SimpleKalmanFilter());
+  const latFilter = useRef(new SimpleKalmanFilter( Number(rValue), Number(qValue)));
+  const lonFilter = useRef(new SimpleKalmanFilter( Number(rValue), Number(qValue)));
+
+  useEffect(() => {
+    latFilter.current = new SimpleKalmanFilter(Number(rValue), Number(qValue));
+    lonFilter.current = new SimpleKalmanFilter(Number(rValue), Number(qValue));
+  }, [qValue, rValue]);
 
   useEffect(() => {
     isTrackingRef.current = isTracking;
@@ -117,7 +125,10 @@ export default function LocationTracker() {
     };
 
     try {
-      await AsyncStorage.setItem("latestLocation", JSON.stringify(filteredCoords));
+      await AsyncStorage.setItem(
+        "latestLocation",
+        JSON.stringify(filteredCoords)
+      );
     } catch (e) {
       console.error("Failed to save location to AsyncStorage:", e);
     }
@@ -243,6 +254,33 @@ export default function LocationTracker() {
 
   return (
     <View style={style.container}>
+      
+       <View style={{ flexDirection: "row", justifyContent: "space-between", margin: 12 }}>
+        <View style={{ flex: 1, marginRight: 8 }}>
+          <Text>Q (Process noise)</Text>
+          <TextInput
+            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4 }}
+            keyboardType="numeric"
+            value={qValue.toString()}
+            onChangeText={text => setQValue(text)}
+            placeholder="Q"
+            inputMode="decimal"
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text>R (Measurement noise)</Text>
+          <TextInput
+            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4 }}
+            keyboardType="numeric"
+            value={rValue.toString()}
+            onChangeText={text => setRValue(text)}
+            placeholder="R"
+            inputMode="decimal"
+          />
+        </View>
+      </View>
+      
+      
       <View style={style.containerStats}>
         <View style={style.columnLeft}>
           <Text style={style.distanceText}>

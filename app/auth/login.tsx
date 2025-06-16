@@ -3,10 +3,8 @@ import { useForm, Controller } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { Spinner } from "@/spinner/Spinner";
 import { queryLogin } from "@/api/login.query";
-import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
-import { NavigationProp } from "@react-navigation/native";
-import { RootStackParamList } from "@/navigation/Navigation.types";
 
 export default function Login() {
   const {
@@ -89,7 +87,7 @@ export default function Login() {
         <Text style={styles.errorText}>{errors.pass.message}</Text>
       )}
 
-      <View style={{ width: "100%", height: 70 }}>
+      <View style={{ width: "100%", height: 50 }}>
         <Button title="Login" onPress={handleSubmit(onSubmit)} />
       </View>
 

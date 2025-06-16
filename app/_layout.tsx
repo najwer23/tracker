@@ -14,11 +14,11 @@ export default function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <LocationTrackerProvider>
-          <JwtProvider>
+        <JwtProvider>
+          <LocationTrackerProvider>
             <DrawerWithJwt />
-          </JwtProvider>
-        </LocationTrackerProvider>
+          </LocationTrackerProvider>
+        </JwtProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
