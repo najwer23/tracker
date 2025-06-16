@@ -1,7 +1,7 @@
 // kalman.ts
 export class SimpleKalmanFilter {
-  private R: number; // Noise covariance
-  private Q: number; // Process covariance
+  private R: number; // If your measurements are very noisy or unreliable, R will be large. If your measurements are usually accurate, R will be small. So, R tells the Kalman filter how much to trust the measurements.
+  private Q: number; // If the car’s movement is very unpredictable, Q is large. If the car moves very predictably, Q is small. So, Q tells the Kalman filter how much to trust your model of the system’s behavior.
   private A: number;
   private B: number;
   private C: number;
