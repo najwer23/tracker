@@ -56,7 +56,7 @@ export default function Login() {
         }}
         render={({ field: { onChange, value } }) => (
           <TextInput
-          placeholderTextColor="black" 
+            placeholderTextColor="#999"
             placeholder="Email"
             style={[styles.input, errors.email && styles.errorInput]}
             onChangeText={onChange}
@@ -76,7 +76,7 @@ export default function Login() {
         rules={{ required: "Password is required" }}
         render={({ field: { onChange, value } }) => (
           <TextInput
-          placeholderTextColor="black" 
+            placeholderTextColor="#999"
             placeholder="Password"
             style={[styles.input, errors.pass && styles.errorInput]}
             onChangeText={onChange}
@@ -106,8 +106,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: "center", // centers vertically
-    alignItems: "center", // centers horizontally
+    justifyContent: "center",
+    alignItems: "center",
   },
   input: {
     borderWidth: 1,
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     color: "black",
-    width: "100%", // make inputs full width inside container
+    width: "100%",
   },
   errorInput: {
     borderColor: "red",
@@ -125,6 +125,6 @@ const styles = StyleSheet.create({
   errorText: {
     color: "red",
     marginBottom: 10,
-    alignSelf: "flex-start", // align error text to left, not center
+    alignSelf: "flex-start",
   },
 });

@@ -269,7 +269,7 @@ export default function LocationTracker() {
             placeholder="Q"
             editable={!isTracking}
             inputMode="decimal"
-            placeholderTextColor="black" 
+            placeholderTextColor="#999" 
           />
         </View>
         <View style={{ flex: 1,  marginRight: 8 }}>
@@ -282,7 +282,7 @@ export default function LocationTracker() {
             editable={!isTracking}
             placeholder="R"
             inputMode="decimal"
-            placeholderTextColor="black" 
+            placeholderTextColor="#999" 
           />
         </View>
         <View style={{ flex: 1, }}>
@@ -295,7 +295,7 @@ export default function LocationTracker() {
             onChangeText={text => setMaxAccuracy(text)}
             placeholder="Accuracy"
             inputMode="decimal"
-            placeholderTextColor="black" 
+            placeholderTextColor="#999" 
           />
         </View>
       </View>
