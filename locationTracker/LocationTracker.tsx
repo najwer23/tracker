@@ -205,7 +205,7 @@ export default function LocationTracker() {
       {
         accuracy: Location.Accuracy.Highest,
         timeInterval: 500,
-        distanceInterval: 10,
+        distanceInterval: 8,
       },
       onForegroundLocationUpdate
     );
@@ -214,7 +214,7 @@ export default function LocationTracker() {
       accuracy: Location.Accuracy.Highest,
       activityType: Location.ActivityType.Fitness,
       timeInterval: 500,
-      distanceInterval: 10,
+      distanceInterval: 8,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: "Location Tracking",
