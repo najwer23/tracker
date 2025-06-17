@@ -2,7 +2,7 @@ import { View, TextInput, Button, Text, StyleSheet } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { Spinner } from "@/spinner/Spinner";
-import { queryLogin } from "@/api/login.query";
+import { queryLogin } from "@/api/auth/login.query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect } from "react";
 

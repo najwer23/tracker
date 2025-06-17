@@ -6,7 +6,7 @@ import { Drawer } from "expo-router/drawer";
 import { FontAwesome } from "@expo/vector-icons";
 import { LocationTrackerProvider } from "@/locationTracker/LocationTracker.context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { JwtContext, JwtProvider } from "@/api/jwt.context";
+import { JwtContext, JwtProvider } from "@/api/auth/jwt.context";
 
 const queryClient = new QueryClient();
 
