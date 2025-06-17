@@ -204,8 +204,8 @@ export default function LocationTracker() {
     foregroundSubscription.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.Highest,
-        timeInterval: 0,
-        distanceInterval: 0,
+        timeInterval: 500,
+        distanceInterval: 10,
       },
       onForegroundLocationUpdate
     );
@@ -213,8 +213,8 @@ export default function LocationTracker() {
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       accuracy: Location.Accuracy.Highest,
       activityType: Location.ActivityType.Fitness,
-      timeInterval: 0,
-      distanceInterval: 0,
+      timeInterval: 500,
+      distanceInterval: 10,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: "Location Tracking",
