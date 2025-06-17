@@ -51,7 +51,7 @@ export default function Index() {
       </Text>
 
       <View style={styles.containerFooter}>
-        <Text style={styles.copyright}>©</Text>
+        <Text style={styles.copyright}>1.0.0 ©</Text>
         <TouchableOpacity
           onPress={() => Linking.openURL("https://najwer23.github.io")}
         >
