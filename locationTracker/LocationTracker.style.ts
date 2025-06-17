@@ -23,6 +23,8 @@ export const style = StyleSheet.create({
   containerStats: {
     flexDirection: "row",
     padding: 16,
+    paddingTop: 0,
+    paddingBottom: 8,
     alignItems: "center", // vertically center items in the row
     justifyContent: "space-between",
   },

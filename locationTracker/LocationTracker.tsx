@@ -28,9 +28,10 @@ export default function LocationTracker() {
     setDuration,
     setTotalDistance,
     setQValue,
-    setRValue
+    setRValue,
   } = useLocationTracker();
 
+  const [currentAccuracy, setCurrentAccuracy] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -42,8 +43,12 @@ export default function LocationTracker() {
   const messageQueue = useRef<string[]>([]);
   const isTrackingRef = useRef(isTracking);
 
-  const latFilter = useRef(new SimpleKalmanFilter( Number(rValue), Number(qValue)));
-  const lonFilter = useRef(new SimpleKalmanFilter( Number(rValue), Number(qValue)));
+  const latFilter = useRef(
+    new SimpleKalmanFilter(Number(rValue), Number(qValue))
+  );
+  const lonFilter = useRef(
+    new SimpleKalmanFilter(Number(rValue), Number(qValue))
+  );
 
   useEffect(() => {
     latFilter.current = new SimpleKalmanFilter(Number(rValue), Number(qValue));
@@ -114,17 +119,20 @@ export default function LocationTracker() {
   const onForegroundLocationUpdate = async (loc: Location.LocationObject) => {
     if (!isTrackingRef.current) return;
 
-    if (loc.coords.accuracy && loc.coords.accuracy > Number(maxAccuracy) ) {
-      return;
+    if (loc.coords.accuracy) {
+      setCurrentAccuracy(loc.coords.accuracy);
+      if (loc.coords.accuracy > Number(maxAccuracy)) {
+        return;
+      }
     }
 
     const filteredLat = loc.coords.latitude;
     const filteredLon = loc.coords.longitude;
 
     const filteredCoords = {
-      ...loc.coords,
-      latitude: filteredLat,
-      longitude: filteredLon,
+      a: Number((loc.coords.accuracy)?.toFixed(2)),
+      lat: filteredLat,
+      lon: filteredLon,
     };
 
     try {
@@ -142,10 +150,10 @@ export default function LocationTracker() {
       if (prev.length > 0) {
         const prevPoint = prev[0];
         const dist = getDistanceFromLatLonInMeters(
-          prevPoint.latitude,
-          prevPoint.longitude,
-          filteredCoords.latitude,
-          filteredCoords.longitude
+          prevPoint.lat,
+          prevPoint.lon,
+          filteredCoords.lat,
+          filteredCoords.lon
         );
         setTotalDistance((prevDist) => prevDist + dist);
       }
@@ -155,7 +163,7 @@ export default function LocationTracker() {
         payload: {
           ...filteredCoords,
           index: newList.length - 1,
-          accuracy: filteredCoords.accuracy ?? 0,
+          accuracy: filteredCoords.a ?? 0,
         },
       });
 
@@ -164,6 +172,11 @@ export default function LocationTracker() {
   };
 
   const startLocationTracking = async (): Promise<void> => {
+    if (foregroundSubscription.current) {
+    foregroundSubscription.current.remove();
+    foregroundSubscription.current = null;
+  }
+  
     setIsTracking(true);
     setStartTime(Date.now());
 
@@ -187,18 +200,6 @@ export default function LocationTracker() {
         "Background location permission is required."
       );
       return;
-    }
-
-    try {
-      const initialLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Highest,
-      });
-
-      if (mapReady) {
-        onForegroundLocationUpdate(initialLocation);
-      }
-    } catch (error) {
-      console.error("Failed to get initial location:", error);
     }
 
     foregroundSubscription.current = await Location.watchPositionAsync(
@@ -249,6 +250,7 @@ export default function LocationTracker() {
     setDuration(0);
     setAccumulatedDuration(0);
     setIsTracking(false);
+    setCurrentAccuracy(0);
 
     sendMessageToWebView({
       type: "clearMarkers",
@@ -257,50 +259,77 @@ export default function LocationTracker() {
 
   return (
     <View style={style.container}>
-      
-       <View style={{ flexDirection: "row", justifyContent: "space-between", margin: 12 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          margin: 12,
+        }}
+      >
         <View style={{ flex: 1, marginRight: 8 }}>
           <Text>Q (ProcN)</Text>
           <TextInput
-            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4, color: 'black' }}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ccc",
+              borderRadius: 4,
+              padding: 6,
+              marginTop: 4,
+              color: "black",
+            }}
             keyboardType="numeric"
             value={qValue.toString()}
-            onChangeText={text => setQValue(text)}
+            onChangeText={(text) => setQValue(text)}
             placeholder="Q"
             editable={!isTracking}
             inputMode="decimal"
-            placeholderTextColor="#999" 
+            placeholderTextColor="#999"
           />
         </View>
-        <View style={{ flex: 1,  marginRight: 8 }}>
+        <View style={{ flex: 1, marginRight: 8 }}>
           <Text>R (MeasN)</Text>
           <TextInput
-            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4, color: 'black' }}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ccc",
+              borderRadius: 4,
+              padding: 6,
+              marginTop: 4,
+              color: "black",
+            }}
             keyboardType="numeric"
             value={rValue.toString()}
-            onChangeText={text => setRValue(text)}
+            onChangeText={(text) => setRValue(text)}
             editable={!isTracking}
             placeholder="R"
             inputMode="decimal"
-            placeholderTextColor="#999" 
+            placeholderTextColor="#999"
           />
         </View>
-        <View style={{ flex: 1, }}>
+        <View style={{ flex: 1 }}>
           <Text>Max. Accuracy</Text>
           <TextInput
-            style={{ borderWidth: 1, borderColor: "#ccc", borderRadius: 4, padding: 6, marginTop: 4, color: 'black' }}
+            style={{
+              borderWidth: 1,
+              borderColor: "#ccc",
+              borderRadius: 4,
+              padding: 6,
+              marginTop: 4,
+              color: "black",
+            }}
             keyboardType="numeric"
             value={maxAccuracy.toString()}
             editable={!isTracking}
-            onChangeText={text => setMaxAccuracy(text)}
+            onChangeText={(text) => setMaxAccuracy(text)}
             placeholder="Accuracy"
             inputMode="decimal"
-            placeholderTextColor="#999" 
+            placeholderTextColor="#999"
           />
+          <Text>{currentAccuracy.toFixed(2)}</Text>
+          
         </View>
       </View>
-      
-      
+
       <View style={style.containerStats}>
         <View style={style.columnLeft}>
           <Text style={style.distanceText}>

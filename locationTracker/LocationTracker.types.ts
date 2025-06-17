@@ -1,9 +1,9 @@
 import * as Location from "expo-location";
 
 export interface LocationCoords {
-  latitude: number;
-  longitude: number;
-  accuracy?: number | null;
+  lat: number;
+  lon: number;
+  a?: number | null; // accuracy
   altitude?: number | null;
   heading?: number | null;
   speed?: number | null;

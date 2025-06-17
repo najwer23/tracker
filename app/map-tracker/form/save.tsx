@@ -4,7 +4,6 @@ import {
   Text,
   Button,
   StyleSheet,
-  ActivityIndicator,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { JwtContext } from "@/api/auth/jwt.context";
@@ -31,7 +30,6 @@ export default function Save() {
   });
 
   const handleSave = () => {
-    console.log("clikc!");
     mutate({
       duration,
       totalDistance,
@@ -46,8 +44,6 @@ export default function Save() {
       setShow(false);
       setReady(false);
       reset();
-
-      refreshToken();
 
       timer = setTimeout(() => {
         if (!isAuthenticated && !tokenLoading) {
@@ -90,10 +86,18 @@ export default function Save() {
     return <Spinner />;
   }
 
-  if (data?.code == "OK") {
+  if (data && data?.code == "OK") {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>Session saved!</Text>
+      </View>
+    );
+  }
+
+  if (data && data?.code != "OK") {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>Error</Text>
       </View>
     );
   }

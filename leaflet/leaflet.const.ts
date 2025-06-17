@@ -83,8 +83,8 @@ export const initialMapHtml = `
         }
 
         if (data.type === 'addMarker') {
-          const { latitude, longitude } = data.payload;
-          points.push([latitude, longitude]);
+          const { lat, lon } = data.payload;
+          points.push([lat, lon]);
 
           if (polyline) {
             map.removeLayer(polyline);
@@ -93,8 +93,8 @@ export const initialMapHtml = `
 
           updateCircles();
 
-          map.panTo([latitude, longitude]);
-          console.log('Added point at:', latitude, longitude);
+          map.panTo([lat, lon]);
+          console.log('Added point at:', lat, lon);
         }
       } catch (e) {
         console.error('Failed to parse message', e);
