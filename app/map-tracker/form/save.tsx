@@ -1,11 +1,5 @@
 import React, { useContext, useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  Button,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, Button, StyleSheet } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { JwtContext } from "@/api/auth/jwt.context";
 import { useLocationTracker } from "@/locationTracker/LocationTracker.context";
@@ -15,8 +9,7 @@ import { mapTrackerSave } from "@/api/mapTracker/save.query";
 import { Spinner } from "@/spinner/Spinner";
 
 export default function Save() {
-  const { isAuthenticated, tokenLoading, refreshToken } =
-    useContext(JwtContext);
+  const { isAuthenticated, tokenLoading } = useContext(JwtContext);
   const [show, setShow] = useState(false);
   const [ready, setReady] = useState(false);
   const [time, setTime] = useState(0);
@@ -26,7 +19,7 @@ export default function Save() {
 
   const { mutate, data, isPending, reset } = useMutation({
     mutationKey: ["mapTrackerSave", "mapTrackerSave" + time],
-    mutationFn: mapTrackerSave
+    mutationFn: mapTrackerSave,
   });
 
   const handleSave = () => {
@@ -38,6 +31,8 @@ export default function Save() {
     });
   };
 
+  console.log(1)
+
   useFocusEffect(
     useCallback(() => {
       let timer;
@@ -47,14 +42,10 @@ export default function Save() {
       setReady(false);
       reset();
 
-      //refreshToken();
-
-      timer = setTimeout(() => {
-        if (!isAuthenticated && !tokenLoading) {
-          setShow(true);
-        }
-        setReady(true);
-      }, 50);
+      if (!isAuthenticated && !tokenLoading) {
+        setShow(true);
+      }
+      setReady(true);
 
       return () => {
         clearTimeout(timer);
