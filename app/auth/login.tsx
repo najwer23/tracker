@@ -56,6 +56,7 @@ export default function Login() {
         }}
         render={({ field: { onChange, value } }) => (
           <TextInput
+          placeholderTextColor="black" 
             placeholder="Email"
             style={[styles.input, errors.email && styles.errorInput]}
             onChangeText={onChange}
@@ -75,6 +76,7 @@ export default function Login() {
         rules={{ required: "Password is required" }}
         render={({ field: { onChange, value } }) => (
           <TextInput
+          placeholderTextColor="black" 
             placeholder="Password"
             style={[styles.input, errors.pass && styles.errorInput]}
             onChangeText={onChange}
